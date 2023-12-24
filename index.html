@@ -1,0 +1,60 @@
+<html>
+
+<head>
+    <title>Jann Stute</title>
+    <style>
+        :root {
+            --term-text-color: lightgrey;
+            --term-blue: royalblue;
+            --term-green: limegreen;
+        }
+
+        body {
+            background-color: black;
+            color: var(--term-text-color);
+            font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+        }
+
+        #terminal {
+            width: 80ch;
+            margin: auto;
+        }
+
+        .cmd-root::before {
+            color: var(--term-green);
+            content: 'root@jpvs-tachi';
+        }
+
+        .cmd-root::after {
+            color: var(--term-text-color);
+            content: ':';
+        }
+
+        .cmd-path {
+            color: var(--term-blue);
+        }
+
+        .cmd-path::after {
+            color: var(--term-text-color);
+            content: '$ ';
+        }
+
+        .ls-outp-path {
+            color: var(--term-blue);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <script>document.createElement("term-command"); document.createElement("term-output")</script>
+    <div id="terminal">
+        <span class="cmd-root"></span><span class="cmd-path">/var/www/html</span><span>ls -la</span><br>
+        <span>total ???</span><br>
+        <span>drwxr-xr-x 1 root root 4096 Jan 01 2023 </span><a class="ls-outp-path" href="/">.</a><br>
+        <span>drwxr-xr-x 1 root root 4096 Jan 01 2023 </span><a class="ls-outp-path" href="/">..</a><br>
+        <span class="cmd-root"></span><span class="cmd-path">/var/www/html</span><br>
+    </div>
+</body>
+
+</html>
