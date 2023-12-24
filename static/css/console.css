@@ -1,0 +1,45 @@
+:root {
+    --term-white: lightgrey;
+    --term-blue: royalblue;
+    --term-green: limegreen;
+}
+
+body {
+    background-color: black;
+    color: var(--term-white);
+    font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+#terminal {
+    width: 80ch;
+    margin: auto;
+}
+
+.cmd-root::before {
+    color: var(--term-green);
+    content: 'root@jpvs-tachi';
+}
+
+.cmd-root::after {
+    color: var(--term-white);
+    content: ':';
+}
+
+.cmd-path {
+    color: var(--term-blue);
+}
+
+.cmd-path::after {
+    color: var(--term-white);
+    content: '$ ';
+}
+
+.ls-outp-dir {
+    color: var(--term-blue);
+    text-decoration: none;
+}
+
+.ls-outp-file {
+    color: var(--term-white);
+    text-decoration: none;
+}
