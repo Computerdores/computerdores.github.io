@@ -1,8 +1,8 @@
 ---
-title: "Write-up: Stoopid's 'dance'"
-description: "A write-up for a crackme involving runtime bytecode modification."
+title: "Writeup: Stoopid's 'dance'"
+description: "A writeup for a crackme involving runtime bytecode modification."
 date: 2024-06-24
-categories: ["Write-Ups", "CrackMes"]
+categories: ["Writeups", "rev"]
 tags: [crackmes.one, stoopid]
 media_subpath: /assets/posts/stoopid-dance/
 ---
