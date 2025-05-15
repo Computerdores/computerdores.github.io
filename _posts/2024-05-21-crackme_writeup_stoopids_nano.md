@@ -1,9 +1,9 @@
 ---
-title: "Writeup: Stoopid's 'nano'"
-description: "A writeup for a crackme involving assembly level obfuscation and cross process fault handling."
+title: "0xL4ugh Writeup: 'nano'"
+description: "A writeup for a reversing challenge from the 0xL4ugh CTF involving assembly level obfuscation and cross process fault handling."
 date: 2024-05-21
 categories: ["Writeups", "rev"]
-tags: [crackmes.one, stoopid]
+tags: ["0xL4ugh CTF", "0xL4ugh CTF 2024"]
 ---
 
 This is my solution to the "nano" crackme which was created by Stoopid for 0xL4ugh CTF 2024. You can find it on [crackmes.one](https://crackmes.one/crackme/65e5f417199e6a5d372a4045).

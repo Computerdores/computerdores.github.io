@@ -1,9 +1,9 @@
 ---
-title: "Writeup: Stoopid's 'dance'"
-description: "A writeup for a crackme involving runtime bytecode modification."
+title: "0xL4ugh Writeup: 'dance'"
+description: "A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification."
 date: 2024-06-24
 categories: ["Writeups", "rev"]
-tags: [crackmes.one, stoopid]
+tags: ["0xL4ugh CTF", "0xL4ugh CTF 2024"]
 media_subpath: /assets/posts/stoopid-dance/
 ---
 
