@@ -1,0 +1,44 @@
+lang: en
+timezone: Europe/Berlin
+url: "https://jann.stute.dev"
+avatar: /assets/profile.png
+social_preview_image: /assets/profile.png
+
+comments:
+  # Global switch for the post comment system. Keeping it empty means disabled.
+  provider: giscus # [disqus | utterances | giscus]
+  # The provider options are as follows:
+  disqus:
+    shortname: # fill with the Disqus shortname. › https://help.disqus.com/en/articles/1717111-what-s-a-shortname
+  # utterances settings › https://utteranc.es/
+  utterances:
+    repo: # <gh-username>/<repo>
+    issue_term: # < url | pathname | title | ...>
+  # Giscus options › https://giscus.app
+  giscus:
+    repo: "Computerdores/computerdores.github.io" # <gh-username>/<repo>
+    repo_id: R_kgDOL1vo1A
+    category: General
+    category_id: "DIC_kwDOL1vo1M4CfiNh"
+    mapping: title # optional, default to 'pathname'
+    strict: # optional, default to '0'
+    input_position: # optional, default to 'bottom'
+    lang: # optional, default to the value of `site.lang`
+    reactions_enabled: # optional, default to the value of `1`
+
+paginate: 10
+
+defaults:
+  - values:
+      layout: post
+      comments: true # Enable comments in posts.
+      permalink: /posts/:title/
+
+jekyll-archives:
+  enabled: [categories, tags]
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    tag: /tags/:name/
+    category: /categories/:name/

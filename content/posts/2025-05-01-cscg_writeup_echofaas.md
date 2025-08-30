@@ -1,7 +1,7 @@
 ---
 title: "CSCG Writeup: 'echofaas'"
 description: "A writeup for the 'echofaas' challenge from the CSCG 2025."
-date: "2025-05-01"
+date: 2025-05-01
 categories: ["Writeups", "pwn"]
 tags: ["CSCG", "CSCG 2025"]
 ---

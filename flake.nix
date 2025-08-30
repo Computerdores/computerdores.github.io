@@ -1,6 +1,5 @@
 {
     inputs = {
-        nixpkgs.url = "github:NixOS/nixpkgs";
         flake-utils.url = "github:numtide/flake-utils";
     };
 
@@ -10,13 +9,8 @@
         in {
             devShells.default = pkgs.mkShell {
                 buildInputs = with pkgs; [
-                    jekyll
-                    bundler
+                    zola
                 ];
-
-                shellHook = ''
-                    bundle install
-                '';
             };
         }
     );
