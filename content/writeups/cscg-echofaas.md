@@ -6,7 +6,7 @@ categories: ["Writeups", "pwn"]
 tags: ["CSCG", "CSCG 2025"]
 ---
 
-# Challenge
+# CSCG Writeup: 'echofaas'
 
 > Everyone is talking about how cool Function as a Service is, therefore i made my own blazing fast echo function as a service using wasm.
 > 

@@ -1,1 +1,7 @@
 - figure out how to get rid of `syntaxes/Bash.sublime-syntax` (currently needed for `terminal.sublime-syntax`)
+- categories
+- tags
+- light theme for code blocks
+- guestbook and comments
+- github pages
+- about page

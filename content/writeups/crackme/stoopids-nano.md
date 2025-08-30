@@ -6,6 +6,8 @@ categories: ["Writeups", "rev"]
 tags: ["0xL4ugh CTF", "0xL4ugh CTF 2024"]
 ---
 
+# 0xL4ugh Writeup: 'nano'
+
 This is my solution to the "nano" crackme which was created by Stoopid for 0xL4ugh CTF 2024. You can find it on [crackmes.one](https://crackmes.one/crackme/65e5f417199e6a5d372a4045).
 
 ## Step 1: Just run it

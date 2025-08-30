@@ -5,4 +5,4 @@ template: "blog.html"
 page_template: "page.html"
 ---
 
-This is my blog!
+Life updates as often as I remember.

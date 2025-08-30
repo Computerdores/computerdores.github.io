@@ -1,0 +1,81 @@
+/* Theme - Dark */
+:root {
+    --col-main: #FFFFCC;
+    --col-background: #00000A;
+    --col-accent-dark: #770000;
+    --col-accent-normal: #DD0000;
+    --col-accent-light: #FF0000;
+}
+
+/* Theme - Light */
+@media (prefers-color-scheme: light) {
+    :root {
+        --col-main: #00000A;
+        --col-background: #FFFFCC;
+        --col-accent-dark: #000077;
+        --col-accent-normal: #0000AA;
+        --col-accent-light: #0000FF;
+    }
+}
+
+* {
+    color: var(--col-main);
+}
+
+html {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-bottom: 50px;
+}
+
+body {
+    max-width: 765px;
+    margin: 0 auto;
+    font-size: 1.1em;
+    font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace; /* See: https://systemfontstack.com/ */
+    background: var(--col-background);
+}
+
+a:any-link {
+    color: var(--col-accent-normal);
+}
+
+/* Header & Nav Bar */
+body > span:first-child {
+    display: block;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+nav {
+    width: fit-content;
+    margin: 25px auto;
+}
+
+/* Code Blocks */
+pre {
+    padding: 15px;
+}
+
+pre > code {
+    display: block;
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+/* Quotes */
+blockquote {
+    padding: 1px;
+    background: #FFF2;
+    border-left: 3px solid #FFF8;
+}
+
+blockquote > p {
+    margin: 15px;
+}
+
+/* Images */
+img {
+    display: block;
+    margin: 0 auto;
+}

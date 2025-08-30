@@ -1,11 +1,27 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
+{% set data = page | default(value=section) %}
+{% set default_title = data.title | default(value="no title") | title %}
 
 <head>
-    <title>{% block title %}{{ page.title | default(value=section.title | default(value="no title")) | title }}{% endblock title %}</title>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ default_title }}{% endblock title %}</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="{{ data.permalink }}">
+    {% if data.description %}
+    <meta name="title" content="{% block title %}{{ default_title }}{% endblock title %}"
+    <meta name="description" content="{{ data.description }}">
+    {% endif %}
+    {% block extra_headers %}{% endblock extra_headers %}
 </head>
 
 <body>
+    <span><h1>Computerdores</h1></span>
     <header>
         <nav>
             [<a href="{{ get_url(path='') }}">home</a>]

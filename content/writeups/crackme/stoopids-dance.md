@@ -7,6 +7,8 @@ tags: ["0xL4ugh CTF", "0xL4ugh CTF 2024"]
 media_subpath: /assets/posts/stoopid-dance/
 ---
 
+# 0xL4ugh Writeup: 'dance'
+
 This is my solution for the "dance" crackme me which was created by Stoopid for the 0xL4ugh CTF 2024. You can find it on [crackmes.one](https://crackmes.one/crackme/65e5f47f199e6a5d372a404d).
 
 ## A first look
