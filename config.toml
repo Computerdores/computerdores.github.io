@@ -1,8 +1,14 @@
+author = "Jann Stute"
+
 # The URL the site will be built for
 base_url = "https://jann.stute.dev"
+output_dir = ".output"
 
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = false
+
+generate_feeds = true
+feed_filenames = [ "atom.xml", "rss.xml" ]
 
 [markdown]
 # Whether to do syntax highlighting

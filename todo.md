@@ -1,7 +1,8 @@
-- figure out how to get rid of `syntaxes/Bash.sublime-syntax` (currently needed for `terminal.sublime-syntax`)
-- categories
-- tags
+- figure out how to get rid of `syntaxes/Bash.sublime-syntax` (currently needed for `syntaxes/terminal.sublime-syntax`)
+- categories & tags
+  - feeds
 - light theme for code blocks
 - guestbook and comments
 - github pages
-- about page
+- /about page
+- /contact page
