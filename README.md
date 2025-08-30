@@ -1,3 +1,6 @@
 Git-Repo for my personal page at [jann.stute.dev](jann.stute.dev).
 
-Uses the [chirpy](https://github.com/cotes2020/jekyll-theme-chirpy/) theme under the [MIT](LICENSE_chirpy_template) license.
+## Links
+- [Zola docs](https://www.getzola.org/documentation/getting-started/overview/)
+- [Tera docs](https://keats.github.io/tera/docs/)
+

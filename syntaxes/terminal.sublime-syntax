@@ -1,0 +1,19 @@
+%YAML 1.2
+---
+name: Terminal Session
+file_extensions: [terminal]
+scope: source.terminal
+
+contexts:
+  main:
+    - match: '[$#] '
+      scope: keyword.prompt.terminal
+      embed: scope:source.shell.bash
+      embed_scope: source.shell.bash
+      escape: '$'
+    - match: '^(>) (.*)$'
+      captures:
+        1: keyword.stdin.terminal
+        2: string.stdin.terminal
+    - match: '^.*$'
+      scope: string.stdout.terminal

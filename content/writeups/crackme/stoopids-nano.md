@@ -10,15 +10,15 @@ This is my solution to the "nano" crackme which was created by Stoopid for 0xL4u
 
 ## Step 1: Just run it
 After just running `./nano` we are greeted with a nice usage text:
-```console
-> ./nano
+```terminal
+$ ./nano
 usage: ./nano <flag>
 ```
 
 Ok so then lets just try giving it some random string to see how it behaves:
 
-```console
-> ./nano test
+```terminal
+$ ./nano test
 no
 ```
 
@@ -103,8 +103,8 @@ And now we have our flag:
 
 Hmm suspicicous you should take a look at that video, I will try validating it with the binary:
 
-```console
-> ./nano 'watch : https://youtu.be/dQw4w9WgXcQ'
+```terminal
+$ ./nano 'watch : https://youtu.be/dQw4w9WgXcQ'
 no
 ```
 
@@ -114,8 +114,8 @@ Ok that was to be expected, let's keep investigating.
 
 To get a better idea of what happens in the check function, let's load it into gdb (with [pwndbg](https://pwndbg.re)) and see what happens exactly happens there:
 
-```console
-> gdb ./nano
+```terminal
+$ gdb ./nano
 > set follow-fork-mode child  # set gdb to follow the child process on a fork() call
 > start test
 > b check                     # set a breakpoint at check()
@@ -433,7 +433,7 @@ Xoring these with the encrypted flag, we get the unencrypted flag:
 
 Which we can validate on the unpatched binary like so:
 
-```console
-> ./nano 0xL4ugh{3z_n4n0mites_t0_g3t_st4rt3d}
+```terminal
+$ ./nano '0xL4ugh{3z_n4n0mites_t0_g3t_st4rt3d}'
 yes
 ```
