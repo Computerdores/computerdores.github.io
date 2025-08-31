@@ -4,5 +4,4 @@
 - light theme for code blocks
 - comments
 - referrer breakdown pagee
-- /about page
 - /contact page
