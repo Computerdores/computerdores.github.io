@@ -2,6 +2,7 @@
 - categories & tags
   - feeds
 - light theme for code blocks
-- guestbook and comments
+- comments
+- referrer breakdown pagee
 - /about page
 - /contact page

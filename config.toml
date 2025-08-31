@@ -17,4 +17,4 @@ highlight_code = true
 extra_syntaxes_and_themes = ["syntaxes"]
 
 [extra]
-# Put all your custom variables here
+form_submit_url = "https://commentsink.ext.stute.dev/"
