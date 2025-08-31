@@ -3,6 +3,5 @@
   - feeds
 - light theme for code blocks
 - guestbook and comments
-- github pages
 - /about page
 - /contact page
