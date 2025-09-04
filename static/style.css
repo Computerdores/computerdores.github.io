@@ -22,13 +22,17 @@
     color: var(--col-main);
 }
 
+/* General Arangment */
 html {
+    height: 100%;
     overflow-y: auto;
     scrollbar-gutter: stable;
-    padding-bottom: 50px;
 }
 
 body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
     max-width: 765px;
     margin: 0 auto;
     font-size: 1.1em;
@@ -36,8 +40,16 @@ body {
     background: var(--col-background);
 }
 
-a:any-link {
-    color: var(--col-accent-normal);
+main {
+    flex: 1;
+}
+
+footer {
+    margin-top: 50px;
+}
+
+footer > p {
+    text-align: center;
 }
 
 /* Header & Nav Bar */
@@ -50,6 +62,22 @@ body > span:first-child {
 nav {
     width: fit-content;
     margin: 25px auto;
+}
+
+/* Links */
+a:any-link {
+    color: var(--col-accent-normal);
+}
+
+/* Footnotes */
+
+.footnote-definition {
+    border: 1px #FFF4 solid;
+    padding: 5px;
+}
+
+.footnote-definition > p {
+    display: initial;
 }
 
 /* Code Blocks */
