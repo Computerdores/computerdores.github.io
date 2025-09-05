@@ -4,4 +4,6 @@
 - light theme for code blocks
 - comments
 - referrer breakdown page
+- darktheme club footer entry
+- check validator.w3.org
 
