@@ -1,6 +1,5 @@
 ---
 title: "Blog"
-date: 2025-09-05
 sort_by: "date"
 template: "blog.html"
 page_template: "blog_page.html"
