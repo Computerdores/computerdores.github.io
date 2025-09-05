@@ -3,6 +3,5 @@
   - feeds
 - light theme for code blocks
 - comments
-- referrer breakdown pagee
-- /contact page
+- referrer breakdown page
 

@@ -23,6 +23,7 @@
 {{ page.content | safe }}
 
 <h2>Leave a Message</h2>
+
 <form accept-charset="UTF-8" method="post" autocomplete="off" enctype="multipart/form-data" action="{{ config.extra.form_submit_url }}">
     <input type="hidden" name="page" value="{{ page.slug }}">
     <label for="name" class="col1">Name: </label>
@@ -41,6 +42,8 @@
     <br>
     <button type="submit" class="col12">Send it!</button>
 </form>
+
+<p>(I moderate what is submitted here; For how your data is handled checkout the <a href="{{get_url(path='privacy')}}">privacy policy</a>)</p>
 
 <h2>Messages</h2>
 <hr>
