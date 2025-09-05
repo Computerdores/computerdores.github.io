@@ -52,6 +52,10 @@ footer > p {
     text-align: center;
 }
 
+footer span {
+    display: inline-block;
+}
+
 /* Header & Nav Bar */
 body > span:first-child {
     display: block;
