@@ -25,4 +25,4 @@ What happens to that data:
 ## Changes
 
 Any changes to this privacy policy will be published here.
-In order to be notified of changes to this page you can subscribe to the RSS/Atom Feeds.
+In order to be notified of changes to this page you can subscribe to the [RSS](/rss.xml)/[Atom](/atom.xml) Feeds.
