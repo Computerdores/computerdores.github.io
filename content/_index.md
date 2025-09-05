@@ -1,5 +1,6 @@
 ---
 title: Home
+date: 2025-09-05
 ---
 
 Welcome to my corner of the web.

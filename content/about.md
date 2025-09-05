@@ -1,6 +1,6 @@
 ---
 title: "About"
-date: 2025-08-30
+date: 2025-09-05
 ---
 
 Hi! I'm Jann, a 21 year old computer science student from Germany.

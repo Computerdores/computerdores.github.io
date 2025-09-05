@@ -1,6 +1,6 @@
 ---
 title: Contact
-date: 2025-08-31
+date: 2025-09-05
 ---
 
 E-Mail: jann.stute [ät] protonmail.com
