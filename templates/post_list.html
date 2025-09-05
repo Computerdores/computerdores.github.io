@@ -1,11 +1,7 @@
-{% set posts_by_date = section.pages | sort(attribute="date") | reverse | group_by(attribute="date") %}
-{% for date, posts in posts_by_date %}
-<h3>{{ date | date(format="%Y-%m-%d") }}</h3>
-<ul>
-    {% for post in posts %}
-    <li>
-        <a href="{{ post.permalink }}">{{ post.title }}</a>
-    </li>
-    {% endfor %}
-</ul>
+{% for post in section.pages %}
+<p>
+    <span>{{ post.date }}</span>
+    <a href="{{ post.permalink }}">{{post.title}}</a>
+</p>
 {% endfor %}
+

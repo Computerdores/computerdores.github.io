@@ -5,4 +5,4 @@ template: "blog.html"
 page_template: "blog_page.html"
 ---
 
-Life updates as often as I remember.
+Welcome to my blog. I aim to post here whenever I have something to say, or if something big happens in my life.
