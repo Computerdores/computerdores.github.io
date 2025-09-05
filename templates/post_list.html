@@ -1,0 +1,6 @@
+{% for post in section.pages %}
+<p>
+    <span>{{ post.date }}</span>
+    <a href="{{ post.permalink }}">{{post.title}}</a>
+</p>
+{% endfor %}

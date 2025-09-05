@@ -1,0 +1,20 @@
+author = "Jann Stute"
+
+# The URL the site will be built for
+base_url = "https://jann.stute.dev"
+output_dir = ".output"
+
+# Whether to automatically compile all Sass files in the sass directory
+compile_sass = false
+
+generate_feeds = true
+feed_filenames = [ "atom.xml", "rss.xml" ]
+
+[markdown]
+# Whether to do syntax highlighting
+# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
+highlight_code = true
+extra_syntaxes_and_themes = ["syntaxes"]
+
+[extra]
+form_submit_url = "https://commentsink.ext.stute.dev/"

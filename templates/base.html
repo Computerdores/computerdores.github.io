@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+{% set data = page | default(value=section) %}
+{% set default_title = data.title | default(value="no title") | title %}
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{{ default_title }}{% endblock title %}</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="{{ get_url(path="atom.xml", trailing_slash=false) }}">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="{{ get_url(path="rss.xml", trailing_slash=false) }}">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="{{ data.permalink }}">
+    {% if data.description %}
+    <meta name="title" content="{% block title %}{{ default_title }}{% endblock title %}"
+    <meta name="description" content="{{ data.description }}">
+    {% endif %}
+    {% block extra_headers %}{% endblock extra_headers %}
+</head>
+
+<body>
+    <span><h1>Computerdores</h1></span>
+    <header>
+        <nav>
+            [<a href="{{ get_url(path='') }}">home</a>]
+            [<a href="{{ get_url(path='blog') }}">blog</a>]
+            [<a href="{{ get_url(path='writeups') }}">writeups</a>]
+            [<a href="{{ get_url(path='guestbook') }}">guestbook</a>]
+            [<a href="{{ get_url(path='about') }}">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock content %}
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="{{ get_url(path='privacy') }}">privacy</a>]</span>
+            &bull;
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            &bull;
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>

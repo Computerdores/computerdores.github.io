@@ -1,0 +1,62 @@
+{% extends "page.html" %}
+
+{% block extra_headers %}
+    {{ super() }}
+    <style>
+        #msg-success {
+            display: none;
+        }
+        #msg-success:target {
+            display: block;
+            margin: 10px auto;
+            padding: 10px;
+            background: darkgreen;
+            width: fit-content;
+        }
+    </style>
+{% endblock extra_headers %}
+
+{% block content %}
+
+<div id="msg-success">Your message was submitted successfully!</div>
+
+{{ page.content | safe }}
+
+<h2>Leave a Message</h2>
+
+<form accept-charset="UTF-8" method="post" autocomplete="off" enctype="multipart/form-data" action="{{ config.extra.form_submit_url }}">
+    <input type="hidden" name="page" value="{{ page.slug }}">
+    <label for="name" class="col1">Name: </label>
+    <input type="text" name="name" placeholder="Alice" maxlength="50" class="col2" required>
+    <br>
+    <label for="site" class="col1">Your Website: </label>
+    <input type="url" name="site" placeholder="https:/example.com/" maxlength="2048" class="col2">
+    <br>
+    <label for="referrer" class="col1">How did you find this website?</label>
+    <input name="referrer" placeholder="The Darktheme Club" maxlength="100" class="col2">
+    <br>
+    <span class="col12">
+    <label for="message">Message:</label><br>
+    <textarea name="message" placeholder="Hi!" maxlength="500" required></textarea>
+    </span>
+    <br>
+    <button type="submit" class="col12">Send it!</button>
+</form>
+
+<p>(I moderate what is submitted here; For how your data is handled checkout the <a href="{{get_url(path='privacy')}}">privacy policy</a>)</p>
+
+<h2>Messages</h2>
+<hr>
+{% set comments = load_data(path="data/guestbook.yml") | sort(attribute="date") | reverse %}
+{% for comment in comments %}
+
+<span>{{ comment.name }}{% if comment.site %} - <a href="{{ comment.site }}">{{ comment.site |
+        regex_replace(pattern="^https?://([^/]+).*", rep="$1") }}</a>{% endif %} - {{ comment.date |
+    date(format="%Y-%m-%d") }}</span>
+<p>{{ comment.message }}</p>
+
+<hr>
+
+{% endfor %}
+
+{% endblock content %}

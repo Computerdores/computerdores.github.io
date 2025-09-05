@@ -1,4 +1,7 @@
-- change title of blog because of share links
-- clean up the gitlab socials link
-- fix comments
-- about page
+- figure out how to get rid of `syntaxes/Bash.sublime-syntax` (currently needed for `syntaxes/terminal.sublime-syntax`)
+- categories & tags
+  - feeds
+- light theme for code blocks
+- comments
+- referrer breakdown page
+
