@@ -5,6 +5,7 @@
 - comments
 - referrer breakdown page
 - darktheme club footer entry
+- 256kB club footer entry
 - check validator.w3.org
 - syntax highlighting w/o inline css
 - fix math expr in stoopid dance writeup ([[https://github.com/getzola/zola/issues/1695]])

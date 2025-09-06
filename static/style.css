@@ -40,6 +40,11 @@ body {
     font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace; /* See: https://systemfontstack.com/ */
 }
 
+header * {
+    width: fit-content;
+    margin: 25px auto;
+}
+
 main {
     flex: 1;
 }
@@ -54,18 +59,6 @@ footer > p {
 
 footer span {
     display: inline-block;
-}
-
-/* Header & Nav Bar */
-body > span:first-child {
-    display: block;
-    margin: 0 auto;
-    width: fit-content;
-}
-
-nav {
-    width: fit-content;
-    margin: 25px auto;
 }
 
 /* Links */
