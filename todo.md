@@ -6,4 +6,5 @@
 - referrer breakdown page
 - darktheme club footer entry
 - check validator.w3.org
+- syntax highlighting w/o inline css
 
