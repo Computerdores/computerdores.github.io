@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>0xl4ugh Writeup: &#x27;Dance&#x27;</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="https://jann.stute.dev/atom.xml">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="https://jann.stute.dev/rss.xml">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="https:&#x2F;&#x2F;jann.stute.dev&#x2F;writeups&#x2F;crackme&#x2F;stoopids-dance&#x2F;">
+    
+    <meta name="title" content="0xl4ugh Writeup: &#x27;Dance&#x27;">
+    <meta name="description" content="A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification.">
+    
+    
+</head>
+
+<body>
+    <header>
+        <h1>Computerdores</h1>
+        <nav>
+            [<a href="https://jann.stute.dev">home</a>]
+            [<a href="https://jann.stute.dev/blog/">blog</a>]
+            [<a href="https://jann.stute.dev/writeups/">writeups</a>]
+            [<a href="https://jann.stute.dev/guestbook/">guestbook</a>]
+            [<a href="https://jann.stute.dev/about/">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        
+<h1>0xL4ugh Writeup: &#x27;dance&#x27;</h1>
+<p><b>Written: 2024-06-24</b></p>
+
+<p><b>Last Updated: 2025-09-06</b></p>
+
+<hr>
+<p>This is my solution for the "dance" crackme me which was created by Stoopid for the 0xL4ugh CTF 2024. You can find it on <a href="https://crackmes.one/crackme/65e5f47f199e6a5d372a404d">crackmes.one</a>.</p>
+<h2 id="a-first-look">A first look</h2>
+<p>Running the binary it helpfully informs us that it requires a flag to be passed as a command line argument:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>usage: ./dance &lt;flag&gt;
+</span></code></pre>
+<p>If we run it with just any flag it takes a while but then returns <code>nop</code>.</p>
+<p>Taking a look at it in Ghidra, we can see that the following main function:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>1</td><td><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">main</span><span>(</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">argc</span><span>,</span><span style="color:#b48ead;">char </span><span>**</span><span style="color:#bf616a;">argv</span><span>) {
+</span></td></tr><tr><td>2</td><td><span>    uint wstatus;
+</span></td></tr><tr><td>3</td><td><span>    __pid_t pid;
+</span></td></tr><tr><td>4</td><td><span>
+</span></td></tr><tr><td>5</td><td><span>    </span><span style="color:#b48ead;">if </span><span>(argc == </span><span style="color:#d08770;">2</span><span>) {
+</span></td></tr><tr><td>6</td><td><span>        pid = </span><span style="color:#bf616a;">fork</span><span>();
+</span></td></tr><tr><td>7</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(pid == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>8</td><td><span>            </span><span style="color:#bf616a;">child_main</span><span>(argv[</span><span style="color:#d08770;">1</span><span>]);
+</span></td></tr><tr><td>9</td><td><span>        }
+</span></td></tr><tr><td>10</td><td><span>        </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_ATTACH,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span></td></tr><tr><td>11</td><td><span>                        </span><span style="color:#65737e;">/* while (waitpid(pid, &amp;wstatus, 0), WTERMSIG(wstatus) != 0) { */
+</span></td></tr><tr><td>12</td><td><span>        </span><span style="color:#b48ead;">while </span><span>(</span><span style="color:#bf616a;">waitpid</span><span>(pid,(</span><span style="color:#b48ead;">int </span><span>*)&amp;wstatus,</span><span style="color:#d08770;">0</span><span>), (wstatus &amp; </span><span style="color:#d08770;">0x7f</span><span>) != </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>13</td><td><span>                        </span><span style="color:#65737e;">/* if (!WIFCONTINUED(wstatus)) { */
+</span></td></tr><tr><td>14</td><td><span>            </span><span style="color:#b48ead;">if </span><span>(wstatus != </span><span style="color:#d08770;">0xFFFF</span><span>) {
+</span></td></tr><tr><td>15</td><td><span>                </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_CONT,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void</span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void</span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span></td></tr><tr><td>16</td><td><span>            }
+</span></td></tr><tr><td>17</td><td><span>        }
+</span></td></tr><tr><td>18</td><td><span>        </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">0</span><span>;
+</span></td></tr><tr><td>19</td><td><span>    }
+</span></td></tr><tr><td>20</td><td><span>    </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">usage: </span><span style="color:#d08770;">%s</span><span style="color:#a3be8c;"> &lt;flag&gt;</span><span style="color:#96b5b4;">\n</span><span>&quot;,*argv);
+</span></td></tr><tr><td>21</td><td><span>                      </span><span style="color:#65737e;">/* WARNING: Subroutine does not return */
+</span></td></tr><tr><td>22</td><td><span>    </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span></td></tr><tr><td>23</td><td><span>}
+</span></td></tr></tbody></table></code></pre>
+<p>Besides printing the usage message, it forks the process and the parent process will then continue to monitor its child process, continuing it when it stops with an exit code that isn't zero.</p>
+<p>The behaviour of the child process is more interesting, it forks the process again and will then execute the following code in the new child process:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>27</td><td><span>    </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_TRACEME,</span><span style="color:#d08770;">0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span></td></tr><tr><td>28</td><td><span>    fd = </span><span style="color:#bf616a;">memfd_create</span><span>(&quot;&quot;,</span><span style="color:#d08770;">0</span><span>);
+</span></td></tr><tr><td>29</td><td><span>    </span><span style="color:#bf616a;">snprintf</span><span>(fd_path,&quot;</span><span style="color:#a3be8c;">/proc/self/fd/</span><span style="color:#d08770;">%d</span><span>&quot;,(ulong)fd);
+</span></td></tr><tr><td>30</td><td><span>    int_arr8[</span><span style="color:#d08770;">0</span><span>] = </span><span style="color:#d08770;">0x6c6c6548</span><span>;
+</span></td></tr><tr><td>31</td><td><span>    int_arr8[</span><span style="color:#d08770;">1</span><span>] = </span><span style="color:#d08770;">0x74202c6f</span><span>;
+</span></td></tr><tr><td>32</td><td><span>    int_arr8[</span><span style="color:#d08770;">2</span><span>] = </span><span style="color:#d08770;">0x20746168</span><span>;
+</span></td></tr><tr><td>33</td><td><span>    int_arr8[</span><span style="color:#d08770;">3</span><span>] = </span><span style="color:#d08770;">0x6f207369</span><span>;
+</span></td></tr><tr><td>34</td><td><span>    int_arr8[</span><span style="color:#d08770;">4</span><span>] = </span><span style="color:#d08770;">0x6b20656e</span><span>;
+</span></td></tr><tr><td>35</td><td><span>    int_arr8[</span><span style="color:#d08770;">5</span><span>] = </span><span style="color:#d08770;">0x66207965</span><span>;
+</span></td></tr><tr><td>36</td><td><span>    int_arr8[</span><span style="color:#d08770;">6</span><span>] = </span><span style="color:#d08770;">0x7920726f</span><span>;
+</span></td></tr><tr><td>37</td><td><span>    int_arr8[</span><span style="color:#d08770;">7</span><span>] = </span><span style="color:#d08770;">0x2e2e756f</span><span>;
+</span></td></tr><tr><td>38</td><td><span>    int_arr3[</span><span style="color:#d08770;">0</span><span>] = </span><span style="color:#d08770;">0x6563696e</span><span>;
+</span></td></tr><tr><td>39</td><td><span>    int_arr3[</span><span style="color:#d08770;">1</span><span>] = </span><span style="color:#d08770;">0x766f6d5f</span><span>;
+</span></td></tr><tr><td>40</td><td><span>    int_arr3[</span><span style="color:#d08770;">2</span><span>] = </span><span style="color:#d08770;">0x293a5f65</span><span>;
+</span></td></tr><tr><td>41</td><td><span>    </span><span style="color:#bf616a;">init_struct1</span><span>(&amp;struct1_inst,int_arr8,int_arr3,</span><span style="color:#d08770;">0</span><span>);
+</span></td></tr><tr><td>42</td><td><span>    </span><span style="color:#bf616a;">decrypt_elf</span><span>(&amp;struct1_inst,cryptic_data,cryptic_data_length);
+</span></td></tr><tr><td>43</td><td><span>                    </span><span style="color:#65737e;">/* write cryptic_data to fd */
+</span></td></tr><tr><td>44</td><td><span>    </span><span style="color:#b48ead;">for </span><span>(i = cryptic_data_length; </span><span style="color:#d08770;">0 </span><span>&lt; (</span><span style="color:#b48ead;">long</span><span>)i; i = i - written) {
+</span></td></tr><tr><td>45</td><td><span>        written = </span><span style="color:#bf616a;">write</span><span>(fd,cryptic_data + (cryptic_data_length - i),i);
+</span></td></tr><tr><td>46</td><td><span>    }
+</span></td></tr><tr><td>47</td><td><span>    handle = </span><span style="color:#bf616a;">dlopen</span><span>(fd_path,</span><span style="color:#d08770;">2</span><span>);
+</span></td></tr><tr><td>48</td><td><span>    dance_with_me = (code *)</span><span style="color:#bf616a;">dlsym</span><span>(handle,&quot;</span><span style="color:#a3be8c;">dance_with_me</span><span>&quot;);
+</span></td></tr><tr><td>49</td><td><span>    success = (*dance_with_me)(flag_input);
+</span></td></tr><tr><td>50</td><td><span>    </span><span style="color:#b48ead;">if </span><span>(success == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>51</td><td><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">ok</span><span>&quot;);
+</span></td></tr><tr><td>52</td><td><span>    } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>53</td><td><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">nop</span><span>&quot;);
+</span></td></tr><tr><td>54</td><td><span>    }
+</span></td></tr><tr><td>55</td><td><span>    </span><span style="color:#bf616a;">dlclose</span><span>(handle);
+</span></td></tr><tr><td>56</td><td><span>                    </span><span style="color:#65737e;">/* WARNING: Subroutine does not return */
+</span></td></tr><tr><td>57</td><td><span>    </span><span style="color:#bf616a;">exit</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span></td></tr></tbody></table></code></pre>
+<p>It seems to decrypt a large chunk of garbage data which is embedded in the binary and write it to a temporary file. Right after that it loads the temporary file as a shared library and executes the function <code>int dance_with_me(char *flag)</code> from it. Dependending on the result of the function call it will then print either "nop" or "ok".</p>
+<h2 id="extracting-the-second-stage">Extracting the second stage</h2>
+<p>From this it seems like the decrypted binary must contain the functionality for validating the flag. Using gdb we can simply set <code>follow-fork-mode</code> to <code>child</code> and set a breakpoint before the temporary file is loaded and copy it from <code>/proc/&lt;pid&gt;/fd/3</code>.</p>
+<p>Looking at the <code>dance_with_me</code> function in Ghidra however we see this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                    **************************************************************
+</span><span>                    *                          FUNCTION                          *
+</span><span>                    **************************************************************
+</span><span>                    undefined dance_with_me()
+</span><span>     undefined         AL:1          &lt;RETURN&gt;
+</span><span>                    dance_with_me                                 XREF[1]:    Entry Point(*)
+</span><span>00101484 cc             ??          CCh
+</span><span>00101485 cc             ??          CCh
+</span><span>00101486 cc             ??          CCh
+</span><span>00101487 cc             ??          CCh
+</span><span>00101488 cc             ??          CCh
+</span><span>00101489 cc             ??          CCh
+</span><span>0010148a cc             ??          CCh
+</span><span>0010148b cc             ??          CCh
+</span><span>0010148c cc             ??          CCh
+</span><span>0010148d cc             ??          CCh
+</span><span>0010148e cc             ??          CCh
+</span><span>0010148f cc             ??          CCh
+</span></code></pre>
+<p>I don't know about you, but this doesn't look like normal code to me. Looking a bit closer it seems like the entire <code>.text</code> section of the binary only contains the one byte <code>int3</code> instruction. Calling this instruction will cause a SIGTRAP signal to be sent to the parent process and the <code>ptrace(PTRACE_TRACEME, ...)</code> lets us know that the parent process is most likely catching these signals, so let's take a look at what that process does with them.</p>
+<h2 id="understanding-the-middle-process">Understanding the middle process</h2>
+<p>In ghidra we can see the following code for the middle process:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>60</td><td><span>    </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_ATTACH,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span></td></tr><tr><td>61</td><td><span>    </span><span style="color:#b48ead;">do </span><span>{
+</span></td></tr><tr><td>62</td><td><span>        </span><span style="color:#b48ead;">do </span><span>{
+</span></td></tr><tr><td>63</td><td><span>            </span><span style="color:#bf616a;">waitpid</span><span>(pid,(</span><span style="color:#b48ead;">int </span><span>*)&amp;wstatus,</span><span style="color:#d08770;">0</span><span>);
+</span></td></tr><tr><td>64</td><td><span>                          </span><span style="color:#65737e;">/* if (WTERMSIG(wstatus == 0) {
+</span></td></tr><tr><td>65</td><td><span style="color:#65737e;">                             if child exited normally quit */
+</span></td></tr><tr><td>66</td><td><span>            </span><span style="color:#b48ead;">if </span><span>((wstatus &amp; </span><span style="color:#d08770;">0x7f</span><span>) == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>67</td><td><span>                </span><span style="color:#b48ead;">return</span><span>;
+</span></td></tr><tr><td>68</td><td><span>            }
+</span></td></tr><tr><td>69</td><td><span>                          </span><span style="color:#65737e;">/* wait for child to terminate irregularly */
+</span></td></tr><tr><td>70</td><td><span>            } </span><span style="color:#b48ead;">while </span><span>(wstatus == </span><span style="color:#d08770;">0xffff</span><span>);
+</span></td></tr><tr><td>71</td><td><span>                            </span><span style="color:#65737e;">/* if (WIFSTOPPED(wstatus) &amp;&amp; WSTOPSIG(wstatus) == SIGTRAP) {
+</span></td></tr><tr><td>72</td><td><span style="color:#65737e;">                               (if the child was stopped by SIGTRAP as sent by INT3 */
+</span></td></tr><tr><td>73</td><td><span>            </span><span style="color:#b48ead;">if </span><span>(((wstatus &amp; </span><span style="color:#d08770;">0xff</span><span>) == </span><span style="color:#d08770;">0x7f</span><span>) &amp;&amp; ((wstatus &amp; </span><span style="color:#d08770;">0xff00</span><span>) == </span><span style="color:#d08770;">0x500</span><span>)) {
+</span></td></tr><tr><td>74</td><td><span>                            </span><span style="color:#65737e;">/* remove code that was previously written to the child */
+</span></td></tr><tr><td>75</td><td><span>            </span><span style="color:#b48ead;">if </span><span>((last_data_length != </span><span style="color:#d08770;">0</span><span>) &amp;&amp; (last_INT3 != </span><span style="color:#d08770;">0</span><span>)) {
+</span></td></tr><tr><td>76</td><td><span>                </span><span style="color:#bf616a;">write_to_process_memory</span><span>(pid,last_INT3,(uint64_t *)BYTE_ARRAY_0010302b,last_data_length);
+</span></td></tr><tr><td>77</td><td><span>            }
+</span></td></tr><tr><td>78</td><td><span>            </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_GETREGS,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,&amp;user_regs);
+</span></td></tr><tr><td>79</td><td><span>            rip_cropped = (</span><span style="color:#b48ead;">int</span><span>)user_regs.</span><span style="color:#bf616a;">rip </span><span>- </span><span style="color:#d08770;">1</span><span style="color:#b48ead;">U </span><span>&amp; </span><span style="color:#d08770;">0xfff</span><span>;
+</span></td></tr><tr><td>80</td><td><span>            rip_hash = </span><span style="color:#bf616a;">hash_rip</span><span>((byte *)&amp;rip_cropped,</span><span style="color:#d08770;">4</span><span>);
+</span></td></tr><tr><td>81</td><td><span>            rip_hash = ~rip_hash;
+</span></td></tr><tr><td>82</td><td><span>            j = -</span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>83</td><td><span>            </span><span style="color:#b48ead;">do </span><span>{
+</span></td></tr><tr><td>84</td><td><span>                j = j + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>85</td><td><span>                </span><span style="color:#b48ead;">if </span><span>(rip_hash == instruction_array[(uint)j].</span><span style="color:#bf616a;">rip_hash</span><span>) </span><span style="color:#b48ead;">break</span><span>;
+</span></td></tr><tr><td>86</td><td><span>            } </span><span style="color:#b48ead;">while </span><span>(instruction_array[(uint)j].</span><span style="color:#bf616a;">rip_hash </span><span>!= </span><span style="color:#d08770;">0</span><span>);
+</span></td></tr><tr><td>87</td><td><span>            write_to_process_memory
+</span></td></tr><tr><td>88</td><td><span>                      (pid,user_regs.</span><span style="color:#bf616a;">rip </span><span>- </span><span style="color:#d08770;">1</span><span>,(uint64_t *)instruction_array[(uint)j].</span><span style="color:#bf616a;">data</span><span>,
+</span></td></tr><tr><td>89</td><td><span>                       (ulong)instruction_array[(uint)j].</span><span style="color:#bf616a;">length</span><span>);
+</span></td></tr><tr><td>90</td><td><span>            last_data_length = (ulong)instruction_array[(uint)j].</span><span style="color:#bf616a;">length</span><span>;
+</span></td></tr><tr><td>91</td><td><span>            last_INT3 = user_regs.</span><span style="color:#bf616a;">rip </span><span>- </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>92</td><td><span>            user_regs.</span><span style="color:#bf616a;">rip </span><span>= user_regs.</span><span style="color:#bf616a;">rip </span><span>- </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>93</td><td><span>            </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_SETREGS,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,&amp;user_regs);
+</span></td></tr><tr><td>94</td><td><span>        }
+</span></td></tr><tr><td>95</td><td><span>        </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_CONT,(</span><span style="color:#b48ead;">long</span><span>)pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span></td></tr><tr><td>96</td><td><span>    } </span><span style="color:#b48ead;">while </span><span>( </span><span style="color:#d08770;">true </span><span>);
+</span></td></tr></tbody></table></code></pre>
+<p>So we can already see <code>ptrace</code> calls that decrease the program counter by one, so when an <code>int3</code> instruction is executed and this code is triggered the program counter will be moved back in front of the instruction.</p>
+<p>However we can also see that the program counter is not just decreased by one, but also transformed using some function, with the result being used to access some array. The resulting data is then passed to a function (which I have named <code>write_to_process_memory</code>) with the following code:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>22</td><td><span>    </span><span style="color:#b48ead;">while </span><span>(remaining != </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>23</td><td><span>        remaining = remaining - </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>24</td><td><span>        ret_code = </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_POKEDATA,(</span><span style="color:#b48ead;">long</span><span>)pid,out_ptr,(</span><span style="color:#b48ead;">void </span><span>*)*in_ptr);
+</span></td></tr><tr><td>25</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(ret_code == -</span><span style="color:#d08770;">1</span><span>) </span><span style="color:#b48ead;">goto</span><span> error;
+</span></td></tr><tr><td>26</td><td><span>        in_ptr = in_ptr + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>27</td><td><span>        out_ptr = out_ptr + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>28</td><td><span>    }
+</span></td></tr></tbody></table></code></pre>
+<p>This code writes the supplied data into the memory of the child process eight bytes at a time. The rest of the code in the function (which is not shown above) just handles data that is not a multiple of eight in length.</p>
+<p>The last thing we can see in the signal handling is that the location of the last write to the child process memory is saved and on the next write it will use this to remove the previously written data from the memory of the child process.</p>
+<p>Bringing all of this together, we know that the middle process replaces the code of the child process during execution and removes it after it was executed.</p>
+<p>This means that to analyse the flag verification process, we will first have to apply the patches done at runtime to the extracted binary of the second stage, so that we can then anaylse that in ghidra.</p>
+<h2 id="populating-the-second-stage">Populating the second stage</h2>
+<p>To achieve this I first reimplemented the function that transforms the program counter (which is called <code>hash_rip</code> in the screenshots above) like so:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">unsigned int </span><span>*rip_translation = (</span><span style="color:#b48ead;">unsigned int </span><span>*)&amp;rip_translation_char;
+</span><span>
+</span><span style="color:#b48ead;">unsigned int </span><span style="color:#8fa1b3;">hash_rip</span><span>(uint8_t *</span><span style="color:#bf616a;">rip_ptr</span><span>, </span><span style="color:#b48ead;">long </span><span style="color:#bf616a;">length</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">long</span><span> i;
+</span><span>    uint8_t *input;
+</span><span>    </span><span style="color:#b48ead;">unsigned int</span><span> outp;
+</span><span>
+</span><span>    outp = </span><span style="color:#d08770;">0xffffffff</span><span>;
+</span><span>    input = rip_ptr;
+</span><span>    </span><span style="color:#b48ead;">for </span><span>(i = length; i != </span><span style="color:#d08770;">0</span><span>; i--) {
+</span><span>        outp = rip_translation[(*input ^ outp) &amp; </span><span style="color:#d08770;">0xFF</span><span>] ^ outp &gt;&gt; </span><span style="color:#d08770;">8</span><span>;
+</span><span>        input++;
+</span><span>    }
+</span><span>    </span><span style="color:#b48ead;">return</span><span> outp;
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">unsigned int </span><span style="color:#8fa1b3;">rip2hash</span><span>(uint64_t *</span><span style="color:#bf616a;">rip</span><span>) {
+</span><span>    uint64_t rip_int = *rip;
+</span><span>    </span><span style="color:#b48ead;">unsigned int</span><span> rip_cropped = (rip_int - </span><span style="color:#d08770;">1</span><span>) &amp; </span><span style="color:#d08770;">0xfff</span><span>;
+</span><span>    </span><span style="color:#b48ead;">return </span><span>~</span><span style="color:#bf616a;">hash_rip</span><span>((uint8_t *)&amp;rip_cropped, </span><span style="color:#d08770;">4</span><span>);
+</span><span>}
+</span></code></pre>
+<p>(<code>rip_translation_char</code> is the array used in the binary, copied from ghidra via 'Copy Special' as a C Array)</p>
+<p>Here <code>rip2hash</code> represents the everything done to the value of the program counter when the signal is caught. This implementation is almost entirely a copy-paste-job from ghidra and was tested on multiple examples so it should work.</p>
+<p>Next I implemented the lookup of program counter to data to be written into the memory of the child process:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">typedef struct </span><span>{
+</span><span>    </span><span style="color:#b48ead;">unsigned int</span><span> hash;
+</span><span>    uint8_t length;
+</span><span>    uint8_t data[</span><span style="color:#d08770;">19</span><span>];
+</span><span>} instruction_data;
+</span><span>
+</span><span>instruction_data *instructions_array = (instruction_data *)&amp;instructions_bytes;
+</span><span>
+</span><span>uint8_t *</span><span style="color:#8fa1b3;">addr2instruction</span><span>(</span><span style="color:#b48ead;">const </span><span>uint64_t </span><span style="color:#bf616a;">addr</span><span>, uint8_t *</span><span style="color:#bf616a;">length</span><span>) {
+</span><span>    uint64_t rip = addr + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    </span><span style="color:#b48ead;">unsigned int</span><span> hash = </span><span style="color:#bf616a;">rip2hash</span><span>(&amp;rip);
+</span><span>    </span><span style="color:#b48ead;">for </span><span>(</span><span style="color:#b48ead;">int</span><span> i = </span><span style="color:#d08770;">0</span><span>; instructions_array[i].</span><span style="color:#bf616a;">hash </span><span>!= </span><span style="color:#d08770;">0</span><span>; i++) {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(instructions_array[i].</span><span style="color:#bf616a;">hash </span><span>!= hash) </span><span style="color:#b48ead;">continue</span><span>;
+</span><span>        *length = instructions_array[i].</span><span style="color:#bf616a;">length</span><span>;
+</span><span>        </span><span style="color:#b48ead;">return</span><span> instructions_array[i].</span><span style="color:#bf616a;">data</span><span>;
+</span><span>    }
+</span><span>    </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">0</span><span>;
+</span><span>}
+</span></code></pre>
+<p>(<code>instructions_bytes</code> was copied from ghidra like <code>rip_translation_char</code>)</p>
+<p>Note that the address is incremented by one like it would be after the <code>int3</code> instruction at that location was executed.</p>
+<p>With this I implemented a <code>write_all</code> function which takes an address, a path to the extracted .text section of an elf and the virtual base address of the .text section and overwrites all consecutive addresses that it can find data for:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span>uint8_t </span><span style="color:#8fa1b3;">write_addr</span><span>(uint64_t </span><span style="color:#bf616a;">addr</span><span>, FILE *</span><span style="color:#bf616a;">file</span><span>, uint64_t </span><span style="color:#bf616a;">base_addr</span><span>) {
+</span><span>    </span><span style="color:#96b5b4;">fseek</span><span>(file, addr - base_addr, SEEK_SET);
+</span><span>    uint8_t length = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    uint8_t *data = </span><span style="color:#bf616a;">addr2instruction</span><span>(addr, &amp;length);
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(data) {
+</span><span>        </span><span style="color:#96b5b4;">fwrite</span><span>(data, length, </span><span style="color:#d08770;">1</span><span>, file);
+</span><span>        </span><span style="color:#b48ead;">for </span><span>(size_t i = </span><span style="color:#d08770;">0</span><span>; i &lt; length; i++) {
+</span><span>            </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">  Byte: </span><span style="color:#d08770;">%x</span><span style="color:#96b5b4;">\n</span><span>&quot;, data[i]);
+</span><span>        }
+</span><span>    }
+</span><span>    </span><span style="color:#b48ead;">return</span><span> length;
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">write_all</span><span>(uint64_t </span><span style="color:#bf616a;">addr</span><span>, </span><span style="color:#b48ead;">const char </span><span>*</span><span style="color:#bf616a;">path</span><span>, uint64_t </span><span style="color:#bf616a;">base_addr</span><span>) {
+</span><span>    FILE *file = </span><span style="color:#96b5b4;">fopen</span><span>(path, &quot;</span><span style="color:#a3be8c;">r+b</span><span>&quot;);
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(file) {
+</span><span>        </span><span style="color:#65737e;">// successfully opened file
+</span><span>        uint8_t written;
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(</span><span style="color:#d08770;">true</span><span>) {
+</span><span>            written = </span><span style="color:#bf616a;">write_addr</span><span>(addr, file, base_addr);
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(written) {
+</span><span>                </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">Wrote </span><span style="color:#d08770;">%d</span><span style="color:#a3be8c;"> bytes to </span><span style="color:#d08770;">%#0x</span><span style="color:#a3be8c;"> (off: </span><span style="color:#d08770;">%#0x</span><span style="color:#a3be8c;">)</span><span style="color:#96b5b4;">\n</span><span>&quot;, written, addr, addr-base_addr);
+</span><span>                addr += written;
+</span><span>            } </span><span style="color:#b48ead;">else
+</span><span>                </span><span style="color:#b48ead;">break</span><span>;
+</span><span>        }
+</span><span>        </span><span style="color:#96b5b4;">fclose</span><span>(file);
+</span><span>        </span><span style="color:#b48ead;">return</span><span>;
+</span><span>    }
+</span><span>    </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">couldnt open file</span><span style="color:#96b5b4;">\n</span><span>&quot;);
+</span><span>    </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span><span>}
+</span></code></pre>
+<p>Using all of this I implemented a simple command line utility to populate the second stage:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">extract_text_section</span><span>(</span><span style="color:#b48ead;">const char </span><span>*</span><span style="color:#bf616a;">elf_file_name</span><span>, </span><span style="color:#b48ead;">const char </span><span>*</span><span style="color:#bf616a;">section_file_name</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">const char</span><span> cmd_template[] = &quot;</span><span style="color:#a3be8c;">objcopy --dump-section .text=</span><span style="color:#d08770;">%s %s</span><span>&quot;;
+</span><span>    </span><span style="color:#b48ead;">char </span><span>*full_cmd = </span><span style="color:#96b5b4;">malloc</span><span>(</span><span style="color:#96b5b4;">strlen</span><span>(cmd_template)+</span><span style="color:#96b5b4;">strlen</span><span>(elf_file_name)+</span><span style="color:#96b5b4;">strlen</span><span>(section_file_name));
+</span><span>    </span><span style="color:#96b5b4;">sprintf</span><span>(full_cmd, cmd_template, section_file_name, elf_file_name);
+</span><span>    </span><span style="color:#96b5b4;">system</span><span>(full_cmd);
+</span><span>    </span><span style="color:#96b5b4;">free</span><span>(full_cmd);
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">replace_text_section</span><span>(</span><span style="color:#b48ead;">const char </span><span>*</span><span style="color:#bf616a;">elf_file_name</span><span>, </span><span style="color:#b48ead;">const char </span><span>*</span><span style="color:#bf616a;">section_file_name</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">const char</span><span> cmd_template[] = &quot;</span><span style="color:#a3be8c;">objcopy --update-section .text=</span><span style="color:#d08770;">%s %s %s</span><span>&quot;;
+</span><span>    </span><span style="color:#b48ead;">char </span><span>*full_cmd = </span><span style="color:#96b5b4;">malloc</span><span>(</span><span style="color:#96b5b4;">strlen</span><span>(cmd_template)+</span><span style="color:#96b5b4;">strlen</span><span>(section_file_name)+(</span><span style="color:#96b5b4;">strlen</span><span>(elf_file_name)*</span><span style="color:#d08770;">2</span><span>));
+</span><span>    </span><span style="color:#96b5b4;">sprintf</span><span>(full_cmd, cmd_template, section_file_name, elf_file_name, elf_file_name);
+</span><span>    </span><span style="color:#96b5b4;">system</span><span>(full_cmd);
+</span><span>    </span><span style="color:#96b5b4;">free</span><span>(full_cmd);
+</span><span>}
+</span><span>
+</span><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">main</span><span>(</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">argc</span><span>, </span><span style="color:#b48ead;">char </span><span>**</span><span style="color:#bf616a;">argv</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(argc != </span><span style="color:#d08770;">4</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">usage: </span><span style="color:#d08770;">%s</span><span style="color:#a3be8c;"> &lt;skeleton_elf&gt; &lt;address&gt; &lt;base address&gt;</span><span style="color:#96b5b4;">\n</span><span>&quot;, argv[</span><span style="color:#d08770;">0</span><span>]);
+</span><span>        </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">address and base address should either both include the ghidra offset or neither</span><span style="color:#96b5b4;">\n</span><span>&quot;);
+</span><span>        </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">1</span><span>;
+</span><span>    }
+</span><span>    
+</span><span>    uint64_t addr;
+</span><span>    </span><span style="color:#96b5b4;">sscanf</span><span>(argv[</span><span style="color:#d08770;">2</span><span>], &quot;</span><span style="color:#d08770;">%lx</span><span>&quot;, &amp;addr);
+</span><span>
+</span><span>    uint64_t base_addr;
+</span><span>    </span><span style="color:#96b5b4;">sscanf</span><span>(argv[</span><span style="color:#d08770;">3</span><span>], &quot;</span><span style="color:#d08770;">%lx</span><span>&quot;, &amp;base_addr);
+</span><span>    
+</span><span>    </span><span style="color:#b48ead;">const char</span><span> temp_file_name[] = &quot;</span><span style="color:#a3be8c;">input_elf.text</span><span>&quot;;
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// extract .text section
+</span><span>    </span><span style="color:#bf616a;">extract_text_section</span><span>(argv[</span><span style="color:#d08770;">1</span><span>], temp_file_name);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// populate it
+</span><span>    </span><span style="color:#bf616a;">write_all</span><span>(addr, temp_file_name, base_addr);
+</span><span>
+</span><span>    </span><span style="color:#65737e;">// replace .text section with modified version
+</span><span>    </span><span style="color:#bf616a;">replace_text_section</span><span>(argv[</span><span style="color:#d08770;">1</span><span>], temp_file_name);
+</span><span>}
+</span></code></pre>
+<p>This uses <code>objcopy</code> to extract and replace the .text section of the ELF. One could also parse the ELF via C code (which I originally did), but this is much more complicated and turned out to be a waste of time.</p>
+<p>Using this we can populate the binary with the following command: <code>./populate dance-stage2-skeleton 0x10a0 0x10a0</code>. In this command <code>0x10a0</code> is the virtual base address of the .text section in memory, meaning it tries to populate the entire .text section. In this case this worked without problems because there was an entry for every byte of the .text section, but on different binaries it might be neccessary to run this multiple times with different addresses that weren't populated before.</p>
+<h2 id="analysing-the-populated-second-stage">Analysing the populated second stage</h2>
+<p>Loading the second stage into ghidra we see that the <code>dance_with_me</code> function references multiple other functions, how ever only two of them take in the flag, so let's take a look at the first one:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>176</td><td><span>    </span><span style="color:#b48ead;">do </span><span>{
+</span></td></tr><tr><td>177</td><td><span>        </span><span style="color:#65737e;">// ...
+</span></td></tr><tr><td>178</td><td><span>        *current_char = *current_char ^ *(byte *)((</span><span style="color:#b48ead;">long</span><span>)garbage + *(</span><span style="color:#b48ead;">long </span><span>*)(garbage + </span><span style="color:#d08770;">16</span><span>));
+</span></td></tr><tr><td>179</td><td><span>        *(</span><span style="color:#b48ead;">long </span><span>*)(garbage + </span><span style="color:#d08770;">16</span><span>) = *(</span><span style="color:#b48ead;">long </span><span>*)(garbage + </span><span style="color:#d08770;">16</span><span>) + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>180</td><td><span>        current_char = current_char + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>181</td><td><span>    } </span><span style="color:#b48ead;">while </span><span>(current_char != flag + length);
+</span></td></tr></tbody></table></code></pre>
+<p>In the screenshot you can see that the flag is iterated over character by character and each character is encrypted with bytes from a large buffer. The loop also contains more code which manipulates the data in this buffer, however since neither these manipulations nor the accesses use the flag it self and only depend on hard coded values, I didn't look much closer into that part of the function and just assumed that it generates key bytes for the xor encryption independent of the input.</p>
+<p>The other function that takes in the flag (after it was encrypted as described above) is this one:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>1</td><td><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">strcmp</span><span>(byte *</span><span style="color:#bf616a;">flag</span><span>,byte *</span><span style="color:#bf616a;">param_2</span><span>,</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">length</span><span>) {
+</span></td></tr><tr><td>2</td><td><span>    </span><span style="color:#b48ead;">int</span><span> i;
+</span></td></tr><tr><td>3</td><td><span>    byte *str2;
+</span></td></tr><tr><td>4</td><td><span>    byte *str1;
+</span></td></tr><tr><td>5</td><td><span>
+</span></td></tr><tr><td>6</td><td><span>    i = length;
+</span></td></tr><tr><td>7</td><td><span>    str2 = param_2;
+</span></td></tr><tr><td>8</td><td><span>    str1 = flag;
+</span></td></tr><tr><td>9</td><td><span>    </span><span style="color:#b48ead;">while </span><span>( </span><span style="color:#d08770;">true </span><span>) {
+</span></td></tr><tr><td>10</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(i &lt; </span><span style="color:#d08770;">1</span><span>) {
+</span></td></tr><tr><td>11</td><td><span>            </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">0</span><span>;
+</span></td></tr><tr><td>12</td><td><span>        }
+</span></td></tr><tr><td>13</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(*str1 != *str2) </span><span style="color:#b48ead;">break</span><span>;
+</span></td></tr><tr><td>14</td><td><span>        i = i + -</span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>15</td><td><span>        str1 = str1 + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>16</td><td><span>        str2 = str2 + </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>17</td><td><span>    }
+</span></td></tr><tr><td>18</td><td><span>    </span><span style="color:#b48ead;">return </span><span>(uint)*str1 - (uint)*str2;
+</span></td></tr><tr><td>19</td><td><span>}
+</span></td></tr></tbody></table></code></pre>
+<p>Which can be easily recognized as an implementation of <code>strcmp</code>.</p>
+<p>One other interesting function that I found looks like this:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>24</td><td><span>    local_10 = </span><span style="color:#96b5b4;">fopen</span><span>(&quot;</span><span style="color:#a3be8c;">/proc/self/maps</span><span>&quot;,&quot;</span><span style="color:#a3be8c;">r</span><span>&quot;);
+</span></td></tr><tr><td>25</td><td><span>    </span><span style="color:#b48ead;">if </span><span>(local_10 == (FILE *)</span><span style="color:#d08770;">0x0</span><span>) {
+</span></td></tr><tr><td>26</td><td><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">i</span><span style="color:#96b5b4;">\&#39;</span><span style="color:#a3be8c;">m dead</span><span>&quot;);
+</span></td></tr><tr><td>27</td><td><span>        </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span></td></tr><tr><td>28</td><td><span>        uVar2 = </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>29</td><td><span>    } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>30</td><td><span>        </span><span style="color:#b48ead;">do </span><span>{
+</span></td></tr><tr><td>31</td><td><span>            pcVar3 = </span><span style="color:#96b5b4;">fgets</span><span>(local_1438,</span><span style="color:#d08770;">0x1400</span><span>,local_10);
+</span></td></tr><tr><td>32</td><td><span>            </span><span style="color:#b48ead;">if </span><span>(pcVar3 == (</span><span style="color:#b48ead;">char </span><span>*)</span><span style="color:#d08770;">0x0</span><span>) </span><span style="color:#b48ead;">break</span><span>;
+</span></td></tr><tr><td>33</td><td><span>            local_2468[</span><span style="color:#d08770;">0</span><span>] = </span><span style="color:#d08770;">0</span><span>;
+</span></td></tr><tr><td>34</td><td><span>            iVar1 = </span><span style="color:#bf616a;">__isoc99_sscanf</span><span>(local_1438,&quot;</span><span style="color:#d08770;">%lx</span><span style="color:#a3be8c;">-</span><span style="color:#d08770;">%lx %s %lx %x</span><span style="color:#a3be8c;">:</span><span style="color:#d08770;">%x %u %s</span><span style="color:#96b5b4;">\n</span><span>&quot;,&amp;local_1440,&amp;local_1448,
+</span></td></tr><tr><td>35</td><td><span>                                    local_144d,local_1458,local_145c,local_145a,local_246c,local_2468);
+</span></td></tr><tr><td>36</td><td><span>            local_18 = (</span><span style="color:#b48ead;">long</span><span>)iVar1;
+</span></td></tr><tr><td>37</td><td><span>        </span><span style="color:#b48ead;">while </span><span>((local_144d[</span><span style="color:#d08770;">0</span><span>] != &#39;</span><span style="color:#a3be8c;">r</span><span>&#39;) || (local_144b != &#39;</span><span style="color:#a3be8c;">x</span><span>&#39;));
+</span></td></tr><tr><td>38</td><td><span>        </span><span style="color:#96b5b4;">fclose</span><span>(local_10);
+</span></td></tr><tr><td>39</td><td><span>        local_20 = </span><span style="color:#bf616a;">FUN_0010118c</span><span>(local_1440 + </span><span style="color:#d08770;">0x100</span><span>,local_1448);
+</span></td></tr><tr><td>40</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(local_20 == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>41</td><td><span>            </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">42</span><span>);
+</span></td></tr><tr><td>42</td><td><span>        }
+</span></td></tr><tr><td>43</td><td><span>        local_28 = </span><span style="color:#bf616a;">FUN_0010118c</span><span>(local_20 + </span><span style="color:#d08770;">0x10</span><span>,local_1448);
+</span></td></tr><tr><td>44</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(local_28 == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>45</td><td><span>            </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">42</span><span>);
+</span></td></tr><tr><td>46</td><td><span>        }
+</span></td></tr><tr><td>47</td><td><span>        local_2c = </span><span style="color:#bf616a;">FUN_00101ac0</span><span>(local_20,local_28 - local_20);
+</span></td></tr><tr><td>48</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(local_2c == </span><span style="color:#d08770;">0x5285f228</span><span>) {
+</span></td></tr><tr><td>49</td><td><span>            uVar2 = </span><span style="color:#d08770;">0</span><span>;
+</span></td></tr><tr><td>50</td><td><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>51</td><td><span>            </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">i</span><span style="color:#96b5b4;">\&#39;</span><span style="color:#a3be8c;">m dead</span><span>&quot;);
+</span></td></tr><tr><td>52</td><td><span>            </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">0x2a</span><span>);
+</span></td></tr><tr><td>53</td><td><span>            uVar2 = </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>54</td><td><span>        }
+</span></td></tr><tr><td>55</td><td><span>    }
+</span></td></tr><tr><td>56</td><td><span>    </span><span style="color:#b48ead;">return</span><span> uVar2;
+</span></td></tr><tr><td>57</td><td><span>}
+</span></td></tr></tbody></table></code></pre>
+<p>It seems to validate the memory layout without actually affecting the verification of the flag in any way besides terminating the process if the verification fails.</p>
+<p>Putting all of this together we get code for the <code>dance_with_me</code> function that looks like this:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>73</td><td><span>    flag_len = </span><span style="color:#96b5b4;">strlen</span><span>(flag);
+</span></td></tr><tr><td>74</td><td><span>    </span><span style="color:#bf616a;">init_keygenerator</span><span>(keygenerator,&amp;local_68,&amp;local_74,</span><span style="color:#d08770;">0</span><span>);
+</span></td></tr><tr><td>75</td><td><span>    cVar1 = </span><span style="color:#bf616a;">memory_map_verification</span><span>();
+</span></td></tr><tr><td>76</td><td><span>    </span><span style="color:#b48ead;">if </span><span>(cVar1 == </span><span style="color:#d08770;">1</span><span>) {
+</span></td></tr><tr><td>77</td><td><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">i</span><span style="color:#96b5b4;">\&#39;</span><span style="color:#a3be8c;">m dead</span><span>&quot;);
+</span></td></tr><tr><td>78</td><td><span>        outp = </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>79</td><td><span>    } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>80</td><td><span>        </span><span style="color:#bf616a;">encrypt_flag</span><span>(keygenerator,flag,flag_len);
+</span></td></tr><tr><td>81</td><td><span>        </span><span style="color:#b48ead;">if </span><span>(flag_len &lt; </span><span style="color:#d08770;">49</span><span>) {
+</span></td></tr><tr><td>82</td><td><span>            outp = </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>83</td><td><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>84</td><td><span>            iVar2 = </span><span style="color:#96b5b4;">strcmp</span><span>(flag,correct_ciphertext,</span><span style="color:#d08770;">49</span><span>);
+</span></td></tr><tr><td>85</td><td><span>            </span><span style="color:#b48ead;">if </span><span>(iVar2 == </span><span style="color:#d08770;">0</span><span>) {
+</span></td></tr><tr><td>86</td><td><span>                outp = </span><span style="color:#d08770;">0</span><span>;
+</span></td></tr><tr><td>87</td><td><span>            } </span><span style="color:#b48ead;">else </span><span>{
+</span></td></tr><tr><td>88</td><td><span>                outp = </span><span style="color:#d08770;">1</span><span>;
+</span></td></tr><tr><td>89</td><td><span>            }
+</span></td></tr><tr><td>90</td><td><span>        }
+</span></td></tr><tr><td>91</td><td><span>    }
+</span></td></tr><tr><td>92</td><td><span>    </span><span style="color:#b48ead;">return</span><span> outp;
+</span></td></tr></tbody></table></code></pre>
+<h2 id="extracting-the-flag">Extracting the flag</h2>
+<p>Knowing that the flag is xor encrypted and the resulting ciphertext compared to a hard coded one, we should be able to run it with gdb and modify the arguments of the encryption to instead decrypt the hardcoded ciphertext. We can achieve this by replacing the flag argument of <code>encrypt_flag</code> with the expected ciphertext.</p>
+<p>To do this we can simply write a program in C which loads the function and runs it, like so:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">#include </span><span>&lt;</span><span style="color:#a3be8c;">stdio.h</span><span>&gt;
+</span><span>
+</span><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">dance_with_me</span><span>(</span><span style="color:#b48ead;">char </span><span>*</span><span style="color:#bf616a;">flag</span><span>);
+</span><span>
+</span><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">main</span><span>() {
+</span><span>    </span><span style="color:#bf616a;">dance_with_me</span><span>(&quot;</span><span style="color:#a3be8c;">1111111111111111111111111111111111111111111111111</span><span>&quot;);
+</span><span>}
+</span></code></pre>
+<p>However If we compile this and load it into gdb we get this:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>cannot open shared object file: No such file or directory
+</span></code></pre>
+<p>Ok this is a quick fix. Simply run <code>export LD_LIBRARY_PATH=$PWD</code> which tells the dynamic linker where to find the shared object.</p>
+<p>However running it now we still can't debug it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>[Inferior 1 (process 8105) exited with code 052]
+</span></code></pre>
+<p>After way too much confusion on my end, I finally remembered that certain code from a shared object is executed when it is loaded. Knowing this we can look at the different init functions in ghidra and find this:</p>
+<pre data-linenos data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><table><tbody><tr><td>1</td><td><span style="color:#b48ead;">void </span><span style="color:#8fa1b3;">_INIT_1</span><span>(</span><span style="color:#b48ead;">void</span><span>) {
+</span></td></tr><tr><td>2</td><td><span>    </span><span style="color:#bf616a;">memory_map_verification</span><span>();
+</span></td></tr><tr><td>3</td><td><span>    </span><span style="color:#b48ead;">return</span><span>;
+</span></td></tr><tr><td>4</td><td><span>}
+</span></td></tr></tbody></table></code></pre>
+<p>We already know <code>memory_map_verification</code> from earlier, it verifies the memory layout and terminates the process with exit code 42 if it is wrong. And as it turns out $052_8 = 42_{10}$ which is the exact return code that gdb was telling us about.</p>
+<p>Knowing this we can simply patch the <code>memory_map_verification</code> to completely disable it:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>                    **************************************************************
+</span><span>                    *                          FUNCTION                          *
+</span><span>                    **************************************************************
+</span><span>                    undefined memory_map_verification()
+</span><span>     undefined         AL:1          &lt;RETURN&gt;
+</span><span>                      ...
+</span><span>                    memory_map_verification                       XREF[4]:    ...
+</span><span>0010125b c3             RET
+</span></code></pre>
+<p>Running it now we have no problems and can simply proceed as planned to get the flag:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>pwndbg&gt; print (char*) $rbp-0x40
+</span><span>$3 = 0x7fffffffdc90 &quot;0xL4ugh{i_h0p3_you_l1k3d_ptr4c3_and_lat1n_danc3s}\336\377\377\377\177&quot;
+</span></code></pre>
+
+
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="https://jann.stute.dev/privacy/">privacy</a>]</span>
+            &bull;
+            <span>[<a href="https://github.com/Computerdores/computerdores.github.io">Source Code available on GitHub</a>]</span>
+            &bull;
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            &bull;
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>

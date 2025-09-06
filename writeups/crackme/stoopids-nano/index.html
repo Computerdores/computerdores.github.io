@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>0xl4ugh Writeup: &#x27;Nano&#x27;</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="https://jann.stute.dev/atom.xml">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="https://jann.stute.dev/rss.xml">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="https:&#x2F;&#x2F;jann.stute.dev&#x2F;writeups&#x2F;crackme&#x2F;stoopids-nano&#x2F;">
+    
+    <meta name="title" content="0xl4ugh Writeup: &#x27;Nano&#x27;">
+    <meta name="description" content="A writeup for a reversing challenge from the 0xL4ugh CTF involving assembly level obfuscation and cross process fault handling.">
+    
+    
+</head>
+
+<body>
+    <header>
+        <h1>Computerdores</h1>
+        <nav>
+            [<a href="https://jann.stute.dev">home</a>]
+            [<a href="https://jann.stute.dev/blog/">blog</a>]
+            [<a href="https://jann.stute.dev/writeups/">writeups</a>]
+            [<a href="https://jann.stute.dev/guestbook/">guestbook</a>]
+            [<a href="https://jann.stute.dev/about/">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        
+<h1>0xL4ugh Writeup: &#x27;nano&#x27;</h1>
+<p><b>Written: 2024-05-21</b></p>
+
+<p><b>Last Updated: 2025-09-06</b></p>
+
+<hr>
+<p>This is my solution to the "nano" crackme which was created by Stoopid for 0xL4ugh CTF 2024. You can find it on <a href="https://crackmes.one/crackme/65e5f417199e6a5d372a4045">crackmes.one</a>.</p>
+<h2 id="step-1-just-run-it">Step 1: Just run it</h2>
+<p>After just running <code>./nano</code> we are greeted with a nice usage text:</p>
+<pre data-lang="terminal" style="background-color:#2b303b;color:#c0c5ce;" class="language-terminal "><code class="language-terminal" data-lang="terminal"><span style="color:#b48ead;">$ </span><span style="color:#d08770;">.</span><span style="color:#bf616a;">/nano
+</span><span style="color:#a3be8c;">usage: ./nano &lt;flag&gt;
+</span></code></pre>
+<p>Ok so then lets just try giving it some random string to see how it behaves:</p>
+<pre data-lang="terminal" style="background-color:#2b303b;color:#c0c5ce;" class="language-terminal "><code class="language-terminal" data-lang="terminal"><span style="color:#b48ead;">$ </span><span style="color:#d08770;">.</span><span style="color:#bf616a;">/nano </span><span style="color:#a3be8c;">test
+</span><span style="color:#a3be8c;">no
+</span></code></pre>
+<p>Since there is not much more here to see, let's load it into Ghidra.</p>
+<h2 id="step-2-a-first-look-in-ghidra">Step 2: A first look in Ghidra</h2>
+<p>Loading it into Ghidra we see a large main function. Ignoring a bunch of unreadable code we are left with this:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">main</span><span>(</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">argc</span><span>, </span><span style="color:#b48ead;">char</span><span>** </span><span style="color:#bf616a;">argv</span><span>, </span><span style="color:#b48ead;">char</span><span>** </span><span style="color:#bf616a;">envp</span><span>, </span><span style="color:#b48ead;">char </span><span style="color:#bf616a;">param_4</span><span>) {
+</span><span>    </span><span style="color:#65737e;">// declarations and initializations
+</span><span>
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(argc != </span><span style="color:#d08770;">2</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">usage: </span><span style="color:#d08770;">%s</span><span style="color:#a3be8c;"> &lt;flag&gt;</span><span style="color:#96b5b4;">\n</span><span>&quot;, argv[</span><span style="color:#d08770;">0</span><span>]);
+</span><span>        </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span><span>    }
+</span><span>    pid = </span><span style="color:#bf616a;">fork</span><span>();
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(pid == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#65737e;">// a bunch of unreadable code
+</span><span>
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">check</span><span>(argv[</span><span style="color:#d08770;">1</span><span>]) == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">yes</span><span>&quot;);
+</span><span>        } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>            </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">no</span><span>&quot;);
+</span><span>        }
+</span><span>        </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span><span>    }
+</span><span>    </span><span style="color:#65737e;">// a bunch of unreadable code
+</span><span>}
+</span></code></pre>
+<p>This seems to suggest that we only need to look at the <code>check</code> function to see how the flag is validated, so let's do that:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span>undefined4 </span><span style="color:#8fa1b3;">check</span><span>(</span><span style="color:#b48ead;">char </span><span>*</span><span style="color:#bf616a;">param_1</span><span>) {
+</span><span>    size_t </span><span style="color:#bf616a;">sVar1</span><span>;
+</span><span>    byte local_1d;
+</span><span>    undefined4 local_1c;
+</span><span>    
+</span><span>    </span><span style="color:#bf616a;">sVar1 </span><span>= </span><span style="color:#96b5b4;">strlen</span><span>(param_1);
+</span><span>    local_1c = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    local_1d = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">while</span><span>( </span><span style="color:#d08770;">true </span><span>) {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#d08770;">0x23 </span><span>&lt; local_1d) {
+</span><span>            </span><span style="color:#b48ead;">return</span><span> local_1c;
+</span><span>        }
+</span><span>        </span><span style="color:#b48ead;">if </span><span>((</span><span style="color:#b48ead;">int</span><span>)</span><span style="color:#bf616a;">sVar1 </span><span>&lt; (</span><span style="color:#b48ead;">int</span><span>)(uint)local_1d) </span><span style="color:#b48ead;">break</span><span>;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>((</span><span style="color:#b48ead;">char</span><span>)(KEY[(</span><span style="color:#b48ead;">int</span><span>)(uint)local_1d] ^ param_1[local_1d]) != flag[(</span><span style="color:#b48ead;">int</span><span>)(uint)local_1d]) {
+</span><span>            local_1c = </span><span style="color:#d08770;">1</span><span>;
+</span><span>        }
+</span><span>        local_1d = local_1d + </span><span style="color:#d08770;">1</span><span>;
+</span><span>    }
+</span><span>    </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">1</span><span>;
+</span><span>}
+</span></code></pre>
+<p>Ok not very readable, let's clean that up a little bit:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">check</span><span>(</span><span style="color:#b48ead;">char </span><span>*</span><span style="color:#bf616a;">input</span><span>) {
+</span><span>    size_t length;
+</span><span>    byte i;
+</span><span>    </span><span style="color:#b48ead;">int</span><span> wrong;
+</span><span>    
+</span><span>    length = </span><span style="color:#96b5b4;">strlen</span><span>(input);
+</span><span>    wrong = </span><span style="color:#d08770;">false</span><span>;
+</span><span>    </span><span style="color:#b48ead;">for </span><span>(</span><span style="color:#b48ead;">int</span><span> i = </span><span style="color:#d08770;">0</span><span>; i &lt;= </span><span style="color:#d08770;">35</span><span>; i++) {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(i &gt; length) </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">1</span><span>;
+</span><span>        </span><span style="color:#b48ead;">if </span><span>((</span><span style="color:#b48ead;">char</span><span>)(KEY[i] ^ input[i]) != flag[i]) {
+</span><span>          wrong = </span><span style="color:#d08770;">true</span><span>;
+</span><span>        }
+</span><span>    }
+</span><span>    </span><span style="color:#b48ead;">return</span><span> wrong;
+</span><span>}
+</span></code></pre>
+<p>Ok so it seems like the input is verified by xor encrypting it with <code>KEY</code> and comparing the result to the xor encrypted flag.
+Since xor encryption and decryption are equivalent, we can just take the cipher text in <code>flag</code> and decrypt it using <code>KEY</code>.
+And now we have our flag:</p>
+<blockquote>
+<p>watch : https://youtu.be/dQw4w9WgXcQ</p>
+</blockquote>
+<p>Hmm suspicicous you should take a look at that video, I will try validating it with the binary:</p>
+<pre data-lang="terminal" style="background-color:#2b303b;color:#c0c5ce;" class="language-terminal "><code class="language-terminal" data-lang="terminal"><span style="color:#b48ead;">$ </span><span style="color:#d08770;">.</span><span style="color:#bf616a;">/nano </span><span>&#39;</span><span style="color:#a3be8c;">watch : https://youtu.be/dQw4w9WgXcQ</span><span>&#39;
+</span><span style="color:#a3be8c;">no
+</span></code></pre>
+<p>Ok that was to be expected, let's keep investigating.</p>
+<h2 id="step-3-gdb">Step 3: GDB</h2>
+<p>To get a better idea of what happens in the check function, let's load it into gdb (with <a href="https://pwndbg.re">pwndbg</a>) and see what happens exactly happens there:</p>
+<pre data-lang="terminal" style="background-color:#2b303b;color:#c0c5ce;" class="language-terminal "><code class="language-terminal" data-lang="terminal"><span style="color:#b48ead;">$ </span><span style="color:#bf616a;">gdb </span><span style="color:#a3be8c;">./nano
+</span><span style="color:#b48ead;">&gt; </span><span style="color:#a3be8c;">set follow-fork-mode child  # set gdb to follow the child process on a fork() call
+</span><span style="color:#b48ead;">&gt; </span><span style="color:#a3be8c;">start test
+</span><span style="color:#b48ead;">&gt; </span><span style="color:#a3be8c;">b check                     # set a breakpoint at check()
+</span><span style="color:#b48ead;">&gt; </span><span style="color:#a3be8c;">continue
+</span></code></pre>
+<p>Now gdb should stop execution at the beginning of a call to <code>check</code>. Stepping through the function one instruction at a time, we find the following instruction which is executed right before the segfault:</p>
+<pre data-lang="asm" style="background-color:#2b303b;color:#c0c5ce;" class="language-asm "><code class="language-asm" data-lang="asm"><span style="color:#b48ead;">mov </span><span style="color:#bf616a;">r11</span><span>, </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#d08770;">0</span><span>]
+</span></code></pre>
+<p>Ok that is weird, there is no circumstance under which this shouldn't lead to a segfault, yet when we executed the binary without gdb and with the same input, no segfault occured.</p>
+<p>It seems we will have to look at all of that unreadable code in <code>main</code> afterall.</p>
+<h2 id="step-4-deobfuscating-main">Step 4: Deobfuscating main</h2>
+<p>Looking at the <code>main</code> function more closely, the first thing I notice is these weird if statements all over the place:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">if </span><span>((!bVar11) &amp;&amp; (bVar11)) {
+</span><span>    </span><span style="color:#65737e;">// more code
+</span><span>}
+</span></code></pre>
+<p>That looks very suspicious, so let's look at the assembly code that leads to this decompilation error:</p>
+<table><thead><tr><th>address</th><th>bytes</th><th>instruction</th></tr></thead><tbody>
+<tr><td><code>001012d2</code></td><td><code>89 45 f8</code></td><td><code>MOV  dword ptr [RBP + local_10], EAX</code></td></tr>
+<tr><td><code>001012d5</code></td><td><code>83 7d f8 00</code></td><td><code>CMP  dword ptr [RBP + local_10], 0x0</code></td></tr>
+<tr><td><code>001012d9</code></td><td><code>75 6c</code></td><td><code>JNZ  LAB_00101347</code></td></tr>
+<tr><td><code>001012db</code></td><td><code>74 03</code></td><td><code>JZ   0x001012e0</code></td></tr>
+<tr><td><code>001012dd</code></td><td><code>75 01</code></td><td><code>JNZ  0x001012e0</code></td></tr>
+<tr><td><code>001012df</code></td><td><code>e8 48 c7 c7 00</code></td><td><code>CALL SUB_00d7da2c</code></td></tr>
+<tr><td><code>001012e4</code></td><td><code>00 00</code></td><td><code>ADD  byte ptr [RAX],AL</code></td></tr>
+<tr><td><code>001012e6</code></td><td><code>00 48 8b</code></td><td><code>ADD  byte ptr [RAX + -0x75],param_4</code></td></tr>
+</tbody></table>
+<p>Looking at these instructions, we can see that there are three jump instructions after another. The latter two jump to the same address and each tests the exact negation of the other's condition. Looking at the address they jump to, ghidra seems to think it is <em>in the middle of an instruction?</em></p>
+<p>This is because Ghidra assumes that the third conditional jump may not trigger a jump and therefore it concludes that the first byte after it must be the first byte of an instruction.</p>
+<p>Since <em>we</em> know that it will always jump, we can easily remove this type of obfuscation by replacing the five involved bytes (two bytes per jump and one garbage byte that is skipped by the jumps) with two NOP instructions, as you can see here:</p>
+<table><thead><tr><th>address</th><th>bytes</th><th>instruction</th></tr></thead><tbody>
+<tr><td><code>001012d2</code></td><td><code>89 45 f8</code></td><td><code>MOV dword ptr [RBP + local_10], EAX</code></td></tr>
+<tr><td><code>001012d5</code></td><td><code>83 7d f8 00</code></td><td><code>CMP dword ptr [RBP + local_10], 0x0</code></td></tr>
+<tr><td><code>001012d9</code></td><td><code>75 6c</code></td><td><code>JNZ LAB_00101347</code></td></tr>
+<tr><td><code>001012db</code></td><td><code>66 48 90</code></td><td><code>NOP</code></td></tr>
+<tr><td><code>001012de</code></td><td><code>48 90</code></td><td><code>NOP</code></td></tr>
+<tr><td><code>001012e0</code></td><td><code>48 c7 c7 00 00 00 00</code></td><td><code>MOV argc,0x0</code></td></tr>
+<tr><td><code>001012e7</code></td><td><code>48 8b ...</code></td><td><code>...</code></td></tr>
+</tbody></table>
+<p>Having fixed one of these is great, but it would be nice to find and fix all of them and be done with this obfuscation. Luckily the jumps are relative, meaning it is likely the obfuscator used the same bytes everytime.</p>
+<p>Searching the program memory for the four bytes that make up the jump instructions (<code>74 03 75 01</code>), we can indeed find more occurences of this type of obfuscation. After patching all of these out, the decompiler output already looks a LOT better:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">main</span><span>(</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">argc</span><span>,</span><span style="color:#b48ead;">char </span><span>**</span><span style="color:#bf616a;">argv</span><span>,</span><span style="color:#b48ead;">char </span><span>**</span><span style="color:#bf616a;">envp</span><span>,</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">param_4</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">int</span><span> result;
+</span><span>    undefined4 in_register_0000000c;
+</span><span>    undefined auStack_108 [</span><span style="color:#d08770;">24</span><span>];
+</span><span>    ulong uStack_f0;
+</span><span>    </span><span style="color:#b48ead;">long</span><span> lStack_88;
+</span><span>    uint local_24;
+</span><span>    undefined *puStack_20;
+</span><span>    byte local_11;
+</span><span>    __pid_t pid;
+</span><span>    uint uStack_c;
+</span><span>    
+</span><span>    uStack_c = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(argc != </span><span style="color:#d08770;">2</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">usage: </span><span style="color:#d08770;">%s</span><span style="color:#a3be8c;"> &lt;flag&gt;</span><span style="color:#96b5b4;">\n</span><span>&quot;,*argv,envp,</span><span style="color:#bf616a;">CONCAT44</span><span>(in_register_0000000c,param_4));
+</span><span>        </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span><span>    }
+</span><span>    pid = </span><span style="color:#bf616a;">fork</span><span>();
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(pid != </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#bf616a;">func_00101189</span><span>(</span><span style="color:#d08770;">0x10</span><span>,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),</span><span style="color:#d08770;">0</span><span>,</span><span style="color:#d08770;">0</span><span>);
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(</span><span style="color:#bf616a;">waitpid</span><span>(pid,(</span><span style="color:#b48ead;">int </span><span>*)&amp;local_24,</span><span style="color:#d08770;">0</span><span>), (local_24 &amp; </span><span style="color:#d08770;">0x7f</span><span>) != </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(local_24 != </span><span style="color:#d08770;">0xffff</span><span>) {
+</span><span>                </span><span style="color:#b48ead;">if </span><span>(((local_24 &amp; </span><span style="color:#d08770;">0xff</span><span>) == </span><span style="color:#d08770;">0x7f</span><span>) &amp;&amp; ((local_24 &amp; </span><span style="color:#d08770;">0xff00</span><span>) == </span><span style="color:#d08770;">0xb00</span><span>)) {
+</span><span>                    uStack_c = uStack_c + </span><span style="color:#d08770;">1</span><span>;
+</span><span>                    local_11 = ((</span><span style="color:#b48ead;">char</span><span>)uStack_c * &#39;</span><span style="color:#96b5b4;">\b</span><span>&#39; ^ </span><span style="color:#d08770;">0xca</span><span style="color:#b48ead;">U </span><span>| (byte)((</span><span style="color:#b48ead;">int</span><span>)uStack_c &gt;&gt; </span><span style="color:#d08770;">5</span><span>)) ^ </span><span style="color:#d08770;">0xfe</span><span>;
+</span><span>                    puStack_20 = auStack_108;
+</span><span>                    </span><span style="color:#bf616a;">func_00101189</span><span>(</span><span style="color:#d08770;">0xc</span><span>,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),</span><span style="color:#d08770;">0</span><span>,puStack_20);
+</span><span>                    uStack_f0 = (ulong)local_11 | </span><span style="color:#d08770;">0x7ffc9286a800</span><span>;
+</span><span>                    lStack_88 = lStack_88 + </span><span style="color:#d08770;">8</span><span>;
+</span><span>                    puStack_20 = auStack_108;
+</span><span>                    </span><span style="color:#bf616a;">func_00101189</span><span>(</span><span style="color:#d08770;">0xd</span><span>,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),</span><span style="color:#d08770;">0</span><span>,puStack_20);
+</span><span>                }
+</span><span>                </span><span style="color:#bf616a;">func_00101189</span><span>(</span><span style="color:#d08770;">7</span><span>,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),</span><span style="color:#d08770;">0</span><span>,</span><span style="color:#d08770;">0</span><span>);
+</span><span>            }
+</span><span>        }
+</span><span>        </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">0</span><span>;
+</span><span>    }
+</span><span>    </span><span style="color:#bf616a;">func_00101189</span><span>(</span><span style="color:#d08770;">0</span><span>,(ulong)uStack_c &lt;&lt; </span><span style="color:#d08770;">0x20</span><span>,</span><span style="color:#d08770;">0</span><span>,</span><span style="color:#d08770;">0</span><span>);
+</span><span>    result = </span><span style="color:#bf616a;">check</span><span>(argv[</span><span style="color:#d08770;">1</span><span>]);
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(result == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">yes</span><span>&quot;);
+</span><span>    } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">no</span><span>&quot;);
+</span><span>    }
+</span><span>    </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span><span>}
+</span></code></pre>
+<blockquote>
+<p>Since we are modifying the binary, we will have to make sure to validate the flag with the original unmodifed file.
+{: .prompt-warning}</p>
+</blockquote>
+<p>Now that the cpde isn't wrong anymore, it is time to understand what it does.</p>
+<h2 id="step-5-understanding-the-behaviour-of-the-parent-process">Step 5: Understanding the behaviour of the parent process</h2>
+<p>As we can see the <code>main</code> function branches into two parts after a <code>fork</code> of the process, meaning the first part is executed by the parent process, while the second part is executed by the child process.</p>
+<p>Looking at the parent process code we see a bunch of calls to <code>func_00101189</code>, so let's take a look at that function.</p>
+<p>The decompiler output is relatively useless here, but the disassembly speaks volumes:</p>
+<pre data-lang="nasm" style="background-color:#2b303b;color:#c0c5ce;" class="language-nasm "><code class="language-nasm" data-lang="nasm"><span style="color:#b48ead;">MOV  </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_20</span><span>],</span><span style="color:#bf616a;">RDI </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_28</span><span>],</span><span style="color:#bf616a;">RSI </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_30</span><span>],</span><span style="color:#bf616a;">RDX </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_38</span><span>],</span><span style="color:#bf616a;">RCX </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RAX</span><span>,</span><span style="color:#d08770;">0x4f
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RDI</span><span>,</span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_20</span><span>] </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RSI</span><span>,</span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_28</span><span>] </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RDX</span><span>,</span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_30</span><span>] </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">NOP                                 </span><span style="color:#8fa1b3;"># result of our deobfuscation
+</span><span style="color:#b48ead;">NOP                                 </span><span style="color:#8fa1b3;"># result of our deobfuscation
+</span><span style="color:#b48ead;">XOR  </span><span style="color:#bf616a;">RAX</span><span>,</span><span style="color:#d08770;">0x2a
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">R10</span><span>,</span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_38</span><span>]
+</span><span style="color:#b48ead;">SYSCALL
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RAX</span><span>,</span><span style="color:#bf616a;">RAX                        </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_10</span><span>],</span><span style="color:#bf616a;">RAX </span><span style="color:#8fa1b3;"># unnecessary
+</span><span style="color:#b48ead;">MOV  </span><span style="color:#bf616a;">RAX</span><span>,</span><span style="color:#96b5b4;">qword ptr </span><span>[</span><span style="color:#bf616a;">RBP </span><span>+ </span><span style="color:#8fa1b3;">local_10</span><span>] </span><span style="color:#8fa1b3;"># unnecessary
+</span></code></pre>
+<p>I have marked a bunch of instructions in there that are unneccessary to understanding the function. And with those marked, the purpose of the method becomes relatively obvious: It makes a syscall and returns the result. Looking up what syscall the id <code>0x2a</code> belongs to, we can now update the functions signature with the following result:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">long </span><span style="color:#8fa1b3;">ptrace</span><span>(</span><span style="color:#b48ead;">long </span><span style="color:#bf616a;">request</span><span>,</span><span style="color:#b48ead;">long </span><span style="color:#bf616a;">pid</span><span>,</span><span style="color:#b48ead;">void </span><span>*</span><span style="color:#bf616a;">addr</span><span>,</span><span style="color:#b48ead;">void </span><span>*</span><span style="color:#bf616a;">data</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">return </span><span style="color:#bf616a;">syscall</span><span>();
+</span><span>}
+</span></code></pre>
+<p>Knowing the purpose of this function and having corrected its signature, we can go back and take another look at <code>main</code>. Looking at it now, the next thing we need to find out is what ptrace requests are actually happening there. Luckily Ghidra has a really nice feature called "Equate" using this we get a list of C macros with the same value. Searching those for "ptrace" we can quickly identify all the names for them:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#b48ead;">int </span><span style="color:#8fa1b3;">main</span><span>(</span><span style="color:#b48ead;">int </span><span style="color:#bf616a;">argc</span><span>,</span><span style="color:#b48ead;">char </span><span>**</span><span style="color:#bf616a;">argv</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">int</span><span> result;
+</span><span>    undefined auStack_108 [</span><span style="color:#d08770;">24</span><span>];
+</span><span>    ulong uStack_f0;
+</span><span>    </span><span style="color:#b48ead;">long</span><span> lStack_88;
+</span><span>    </span><span style="color:#b48ead;">int</span><span> wstatus;
+</span><span>    undefined *puStack_20;
+</span><span>    byte local_11;
+</span><span>    __pid_t pid;
+</span><span>    uint uStack_c;
+</span><span>    
+</span><span>    uStack_c = </span><span style="color:#d08770;">0</span><span>;
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(argc != </span><span style="color:#d08770;">2</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">printf</span><span>(&quot;</span><span style="color:#a3be8c;">usage: </span><span style="color:#d08770;">%s</span><span style="color:#a3be8c;"> &lt;flag&gt;</span><span style="color:#96b5b4;">\n</span><span>&quot;,*argv);
+</span><span>        </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">1</span><span>);
+</span><span>    }
+</span><span>    pid = </span><span style="color:#bf616a;">fork</span><span>();
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(pid != </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_ATTACH,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span><span>        </span><span style="color:#b48ead;">while </span><span>(</span><span style="color:#bf616a;">waitpid</span><span>(pid,(</span><span style="color:#b48ead;">int </span><span>*)&amp;wstatus,</span><span style="color:#d08770;">0</span><span>), (wstatus &amp; </span><span style="color:#d08770;">0x7f</span><span>) != </span><span style="color:#d08770;">0</span><span>) {
+</span><span>            </span><span style="color:#b48ead;">if </span><span>(wstatus != </span><span style="color:#d08770;">0xffff</span><span>) {
+</span><span>                </span><span style="color:#b48ead;">if </span><span>(((wstatus &amp; </span><span style="color:#d08770;">0xff</span><span>) == </span><span style="color:#d08770;">0x7f</span><span>) &amp;&amp; ((wstatus &amp; </span><span style="color:#d08770;">0xff00</span><span>) == </span><span style="color:#d08770;">0xb00</span><span>)) {
+</span><span>                    uStack_c = uStack_c + </span><span style="color:#d08770;">1</span><span>;
+</span><span>                    local_11 = ((</span><span style="color:#b48ead;">char</span><span>)uStack_c * &#39;</span><span style="color:#96b5b4;">\b</span><span>&#39; ^ </span><span style="color:#d08770;">0xca</span><span style="color:#b48ead;">U </span><span>| (byte)((</span><span style="color:#b48ead;">int</span><span>)uStack_c &gt;&gt; </span><span style="color:#d08770;">5</span><span>)) ^ </span><span style="color:#d08770;">0xfe</span><span>;
+</span><span>                    puStack_20 = auStack_108;
+</span><span>                    </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_GETREGS,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,puStack_20);
+</span><span>                    uStack_f0 = (ulong)local_11 | </span><span style="color:#d08770;">0x7ffc9286a800</span><span>;
+</span><span>                    lStack_88 = lStack_88 + </span><span style="color:#d08770;">8</span><span>;
+</span><span>                    puStack_20 = auStack_108;
+</span><span>                    </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_SETREGS,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,puStack_20);
+</span><span>                }
+</span><span>                </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_CONT,</span><span style="color:#bf616a;">CONCAT44</span><span>(uStack_c,pid),(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span><span>            }
+</span><span>        }
+</span><span>        </span><span style="color:#b48ead;">return </span><span style="color:#d08770;">0</span><span>;
+</span><span>    }
+</span><span>    </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_TRACEME,(ulong)uStack_c &lt;&lt; </span><span style="color:#d08770;">0x20</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span><span>    result = </span><span style="color:#bf616a;">check</span><span>(argv[</span><span style="color:#d08770;">1</span><span>]);
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(result == </span><span style="color:#d08770;">0</span><span>) {
+</span><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">yes</span><span>&quot;);
+</span><span>    } </span><span style="color:#b48ead;">else </span><span>{
+</span><span>        </span><span style="color:#96b5b4;">puts</span><span>(&quot;</span><span style="color:#a3be8c;">no</span><span>&quot;);
+</span><span>    }
+</span><span>    </span><span style="color:#96b5b4;">exit</span><span>(</span><span style="color:#d08770;">0</span><span>);
+</span><span>}
+</span></code></pre>
+<blockquote>
+<p>If Ghidra doesn't let you set an Equate, try to set it on the value in the Assembly listing and re-create the function.
+{: .prompt-tip}</p>
+</blockquote>
+<p>Looking at this now, it appears that the parent process waits for status changes in the child and then, if some conditions apply, modifies the register contents before continuing the child process.</p>
+<p>Looking at the man page for <code>waitpid</code> (<code>man 2 waitpid</code>) tells us that the <code>wstatus</code> result is interpreted via macros which can be found in the <code>sys/wait.h</code> file. Considering the definitions in that header file and its dependencies, this is what the original C code most likely looked like:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span style="color:#bf616a;">ptrace</span><span>(PTRACE_ATTACH,pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>);
+</span><span style="color:#b48ead;">while </span><span>(</span><span style="color:#bf616a;">waitpid</span><span>(pid, &amp;wstatus, </span><span style="color:#d08770;">0</span><span>), </span><span style="color:#bf616a;">WTERMSIG</span><span>(wstatus) != </span><span style="color:#d08770;">0</span><span>) {
+</span><span>    </span><span style="color:#b48ead;">if </span><span>(!</span><span style="color:#bf616a;">WIFCONTINUED</span><span>(wstatus)) {
+</span><span>        </span><span style="color:#b48ead;">if </span><span>(</span><span style="color:#bf616a;">WIFSTOPPED</span><span>(wstatus) &amp;&amp; </span><span style="color:#bf616a;">WSTOPSIG</span><span>(wstatus) == SIGSEGV) {
+</span><span>            </span><span style="color:#65737e;">// register modification code
+</span><span>        }
+</span><span>        </span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_CONT,pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>)
+</span><span>    }
+</span><span>}
+</span></code></pre>
+<blockquote>
+<p>The <code>SIGSEGV</code> macro is included via <code>signal.h</code>.
+{: .prompt-info}</p>
+</blockquote>
+<p>Looking at this the general behaviour of the parent process should be easy to understand: It waits until the child process is stopped, modifies its registers only if it was stopped because of a segfault (remember that weird instruction that always triggers a segfault? That seems to trigger this handler) and continues its execution again.</p>
+<p>We can also take a look at the man page for <code>ptrace</code> (<code>man 2 ptrace</code>) and update some types to end up with the following:</p>
+<pre data-lang="c" style="background-color:#2b303b;color:#c0c5ce;" class="language-c "><code class="language-c" data-lang="c"><span>segfault_cnt++;
+</span><span>override = ((</span><span style="color:#b48ead;">char</span><span>)segfault_cnt * &#39;</span><span style="color:#96b5b4;">\b</span><span>&#39; ^ </span><span style="color:#d08770;">0xca</span><span style="color:#b48ead;">U </span><span>| (byte)((</span><span style="color:#b48ead;">int</span><span>)segfault_cnt &gt;&gt; </span><span style="color:#d08770;">5</span><span>)) ^ </span><span style="color:#d08770;">0xfe</span><span>;
+</span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_GETREGS,pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,&amp;user_regs);
+</span><span>user_regs.</span><span style="color:#bf616a;">r12 </span><span>= (ulong)override | </span><span style="color:#d08770;">0x7ffc9286a800</span><span>;
+</span><span>user_regs.</span><span style="color:#bf616a;">rip </span><span>= user_regs.</span><span style="color:#bf616a;">rip </span><span>+ </span><span style="color:#d08770;">8</span><span>;
+</span><span style="color:#bf616a;">ptrace</span><span>(PTRACE_SETREGS,pid,(</span><span style="color:#b48ead;">void </span><span>*)</span><span style="color:#d08770;">0x0</span><span>,&amp;user_regs);
+</span></code></pre>
+<p>So from this it seems like on every segfault the <code>R12</code> register of the child process is set to a new value and the Program Counter / Return Instuction Pointer Register is increased by 8, mostly likely to skip an instruction to prevent the child process from segfaulting again.</p>
+<h2 id="step-6-understanding-the-check-function">Step 6: Understanding the check function</h2>
+<p>Now let's try to understand what that those register modifications are doing by looking closer at the <code>check</code> function where the segfault is caused:</p>
+<table><thead><tr><th>address</th><th>bytes</th><th>instruction / comment</th></tr></thead><tbody>
+<tr><td></td><td></td><td>Load the value at <code>KEY[i]</code> into R12D</td></tr>
+<tr><td><code>00101206</code></td><td><code>0f b6 45 eb</code></td><td><code>MOVZX length,byte ptr [RBP + i]</code></td></tr>
+<tr><td><code>0010120a</code></td><td><code>48 98</code></td><td><code>CDQE</code></td></tr>
+<tr><td><code>0010120c</code></td><td><code>48 8d 15 8d 2e 00 00</code></td><td><code>LEA   RDX,[KEY]</code></td></tr>
+<tr><td><code>00101213</code></td><td><code>0f b6 04 10</code></td><td><code>MOVZX length,byte ptr [length + RDX]=&gt;KEY</code></td></tr>
+<tr><td><code>00101217</code></td><td><code>0f b6 c0</code></td><td><code>MOVZX length,length</code></td></tr>
+<tr><td><code>0010121a</code></td><td><code>41 89 c4</code></td><td><code>MOV   R12D,length</code></td></tr>
+<tr><td></td><td></td><td>Trigger segfault</td></tr>
+<tr><td><code>0010121d</code></td><td><code>4c 8b 1c 25 00 00 00 00</code></td><td><code>MOV   R11,qword ptr [DAT_00000000]</code></td></tr>
+<tr><td></td><td></td><td>Load the value at <code>flag[i]</code> into <code>local_25</code></td></tr>
+<tr><td><code>00101225</code></td><td><code>0f b6 45 eb</code></td><td><code>MOVZX length,byte ptr [RBP + i]</code></td></tr>
+<tr><td><code>00101229</code></td><td><code>48 98</code></td><td><code>CDQE</code></td></tr>
+<tr><td><code>0010122b</code></td><td><code>48 8d 15 2e 2e 00 00</code></td><td><code>LEA   RDX,[flag]</code></td></tr>
+<tr><td><code>00101232</code></td><td><code>0f b6 04 10</code></td><td><code>MOVZX length,byte ptr [length + RDX]=&gt;flag</code></td></tr>
+<tr><td><code>00101236</code></td><td><code>88 45 e3</code></td><td><code>MOV   byte ptr [RBP + local_25],length</code></td></tr>
+<tr><td></td><td></td><td>Load the value at <code>input2[i]</code> into EDX</td></tr>
+<tr><td><code>00101239</code></td><td><code>0f b6 55 eb</code></td><td><code>MOVZX EDX,byte ptr [RBP + i]</code></td></tr>
+<tr><td><code>0010123d</code></td><td><code>48 8b 45 d8</code></td><td><code>MOV   length,qword ptr [RBP + input2]</code></td></tr>
+<tr><td><code>00101241</code></td><td><code>48 01 d0</code></td><td><code>ADD   length,RDX</code></td></tr>
+<tr><td><code>00101244</code></td><td><code>0f b6 00</code></td><td><code>MOVZX length,byte ptr [length]</code></td></tr>
+<tr><td><code>00101247</code></td><td><code>89 c2</code></td><td><code>MOV   EDX,length</code></td></tr>
+<tr><td></td><td></td><td>XOR the input and KEY values</td></tr>
+<tr><td><code>00101249</code></td><td><code>44 89 e0</code></td><td><code>MOV   length,R12D</code></td></tr>
+<tr><td><code>0010124c</code></td><td><code>31 d0</code></td><td><code>XOR   length,EDX</code></td></tr>
+<tr><td><code>0010124e</code></td><td><code>88 45 e2</code></td><td><code>MOV   byte ptr [RBP + local_26],length</code></td></tr>
+<tr><td><code>00101251</code></td><td><code>0f b6 45 e2</code></td><td><code>MOVZX length,byte ptr [RBP + local_26]</code></td></tr>
+<tr><td></td><td></td><td>Compare XOR result to flag value and jump</td></tr>
+<tr><td><code>00101255</code></td><td><code>3a 45 e3</code></td><td><code>CMP   length,byte ptr [RBP + local_25]</code></td></tr>
+<tr><td><code>00101258</code></td><td><code>74 07</code></td><td><code>JZ    LAB_00101261</code></td></tr>
+</tbody></table>
+<p>As we can see, the Segfault instruction is exactly eight bytes long, which lines up nicely with the eight byte increase of the program counter in the segfault handler, which therefore exactly skips that instruction.</p>
+<p>We can also see that the byte loaded from <code>KEY</code> is loaded into <code>R12D</code> meaning that it is overwritten by the segfault handler which is triggered by the instruction at <code>0010121d</code>.</p>
+<p>In conclusion this means the check iterates over the input, xors it with the characters generated by the segfault handler and compares the result to the hardcoded encrypted flag.</p>
+<p>From here we can extract the flag by extracting the generated key bytes and then using those the same way we did in the naive approach to the check function.</p>
+<h2 id="step-7-getting-the-flag">Step 7: Getting the Flag</h2>
+<p>To extract the key bytes we can simply put a breakpoint where the <code>R12</code> register is overwritten and take the value from the <code>EAX</code> register when the breakpoint hits.</p>
+<p>(Make sure to start it with input that is long enough, otherwise the loop in check will end early)</p>
+<p>Doing that we get a list of values like these:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>0x7ffc9286a83c
+</span><span>0x7ffc9286a824
+</span><span>0x7ffc9286a82c
+</span><span>0x7ffc9286a814
+</span><span>...
+</span><span>0x7ffc9286a83d
+</span><span>0x7ffc9286a825
+</span><span>0x7ffc9286a82d
+</span><span>0x7ffc9286a815
+</span></code></pre>
+<p>Since these are not one byte each we need to know which byte is xored with the input. Looking at the instructions from the check function, we can see that the last byte of the xored value is moved onto the stack and back. Therefore we know that only the last byte of those values is relevant. If we truncate the extracted values accordingly, we get a list of of values like these:</p>
+<pre style="background-color:#2b303b;color:#c0c5ce;"><code><span>0x3c
+</span><span>0x24
+</span><span>0x2c
+</span><span>0x14
+</span><span>...
+</span><span>0x3d
+</span><span>0x25
+</span><span>0x2d
+</span><span>0x15
+</span></code></pre>
+<p>Xoring these with the encrypted flag, we get the unencrypted flag:</p>
+<blockquote>
+<p>0xL4ugh{3z_n4n0mites_t0_g3t_st4rt3d}</p>
+</blockquote>
+<p>Which we can validate on the unpatched binary like so:</p>
+<pre data-lang="terminal" style="background-color:#2b303b;color:#c0c5ce;" class="language-terminal "><code class="language-terminal" data-lang="terminal"><span style="color:#b48ead;">$ </span><span style="color:#d08770;">.</span><span style="color:#bf616a;">/nano </span><span>&#39;</span><span style="color:#a3be8c;">0xL4ugh{3z_n4n0mites_t0_g3t_st4rt3d}</span><span>&#39;
+</span><span style="color:#a3be8c;">yes
+</span></code></pre>
+
+
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="https://jann.stute.dev/privacy/">privacy</a>]</span>
+            &bull;
+            <span>[<a href="https://github.com/Computerdores/computerdores.github.io">Source Code available on GitHub</a>]</span>
+            &bull;
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            &bull;
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>
