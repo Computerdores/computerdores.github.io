@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 
+{% block extra_headers %}
+{{ super() }}
+<link rel="stylesheet" href="/syntax.css">
+{% endblock extra_headers %}
+
 {% block content %}
 <h1>{{ page.title }}</h1>
 <p><b>Written: {{ page.date | date(format='%Y-%m-%d') }}</b></p>
