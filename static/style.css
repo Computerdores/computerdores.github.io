@@ -37,7 +37,7 @@ body {
     max-width: 765px;
     margin: 0 auto;
     font-size: 1.1em;
-    font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace; /* See: https://systemfontstack.com/ */
+    font-family: Menlo, Consolas, Monaco, "Adwaita Mono", "Liberation Mono", "Lucida Console", monospace; /* See: https://systemfontstack.com/ */
 }
 
 header * {
