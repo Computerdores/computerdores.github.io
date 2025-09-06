@@ -469,7 +469,7 @@ void _INIT_1(void) {
 }
 ```
 
-We already know `memory_map_verification` from earlier, it verifies the memory layout and terminates the process with exit code 42 if it is wrong. And as it turns out $052_8 = 42_{10}$ which is the exact return code that gdb was telling us about.
+We already know `memory_map_verification` from earlier, it verifies the memory layout and terminates the process with exit code 42 if it is wrong. And as it turns out 052<sub>8</sub> = 42<sub>10</sub> which is the exact return code that gdb was telling us about.
 
 Knowing this we can simply patch the `memory_map_verification` to completely disable it:
 
