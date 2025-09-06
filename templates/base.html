@@ -17,7 +17,7 @@
     <meta name="viewport" content="width=device-width, inital-scale=1">
     <link rel="canonical" href="{{ data.permalink }}">
     {% if data.description %}
-    <meta name="title" content="{% block title %}{{ default_title }}{% endblock title %}"
+    <meta name="title" content="{% block title %}{{ default_title }}{% endblock title %}">
     <meta name="description" content="{{ data.description }}">
     {% endif %}
     {% block extra_headers %}{% endblock extra_headers %}
