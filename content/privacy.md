@@ -3,7 +3,6 @@ title: Privacy Policy
 date: 2025-09-05
 ---
 
-# Privacy Policy
 ## General
 
 I currently use GitHub Pages to host the static content of this site so anything transmitted by your browser is subject to whatever they do with it. This may change in the future (e.g. I may decide to self-host it instead).
