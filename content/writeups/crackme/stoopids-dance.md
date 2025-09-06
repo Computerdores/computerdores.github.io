@@ -2,7 +2,7 @@
 title: "0xL4ugh Writeup: 'dance'"
 description: "A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification."
 date: 2024-06-24
-updated: 2025-08-30
+updated: 2025-09-06
 categories: ["Writeups", "rev"]
 tags: ["0xL4ugh CTF", "0xL4ugh CTF 2024"]
 ---
@@ -23,13 +23,69 @@ If we run it with just any flag it takes a while but then returns `nop`.
 
 Taking a look at it in Ghidra, we can see that the following main function:
 
-![A screenshot of Ghidra showing the code of the main function.](ghidra_main.png)
+```c,linenos
+int main(int argc,char **argv) {
+    uint wstatus;
+    __pid_t pid;
+
+    if (argc == 2) {
+        pid = fork();
+        if (pid == 0) {
+            child_main(argv[1]);
+        }
+        ptrace(PTRACE_ATTACH,(long)pid,(void *)0x0,(void *)0x0);
+                        /* while (waitpid(pid, &wstatus, 0), WTERMSIG(wstatus) != 0) { */
+        while (waitpid(pid,(int *)&wstatus,0), (wstatus & 0x7f) != 0) {
+                        /* if (!WIFCONTINUED(wstatus)) { */
+            if (wstatus != 0xFFFF) {
+                ptrace(PTRACE_CONT,(long)pid,(void*)0x0,(void*)0x0);
+            }
+        }
+        return 0;
+    }
+    printf("usage: %s <flag>\n",*argv);
+                      /* WARNING: Subroutine does not return */
+    exit(1);
+}
+```
 
 Besides printing the usage message, it forks the process and the parent process will then continue to monitor its child process, continuing it when it stops with an exit code that isn't zero.
 
 The behaviour of the child process is more interesting, it forks the process again and will then execute the following code in the new child process:
 
-![A screenshot of Ghidra showing the code that is executed by the new child process.](ghidra_childmain_decryption.png)
+```c,linenos,linenostart=27
+    ptrace(PTRACE_TRACEME,0,(void *)0x0,(void *)0x0);
+    fd = memfd_create("",0);
+    snprintf(fd_path,"/proc/self/fd/%d",(ulong)fd);
+    int_arr8[0] = 0x6c6c6548;
+    int_arr8[1] = 0x74202c6f;
+    int_arr8[2] = 0x20746168;
+    int_arr8[3] = 0x6f207369;
+    int_arr8[4] = 0x6b20656e;
+    int_arr8[5] = 0x66207965;
+    int_arr8[6] = 0x7920726f;
+    int_arr8[7] = 0x2e2e756f;
+    int_arr3[0] = 0x6563696e;
+    int_arr3[1] = 0x766f6d5f;
+    int_arr3[2] = 0x293a5f65;
+    init_struct1(&struct1_inst,int_arr8,int_arr3,0);
+    decrypt_elf(&struct1_inst,cryptic_data,cryptic_data_length);
+                    /* write cryptic_data to fd */
+    for (i = cryptic_data_length; 0 < (long)i; i = i - written) {
+        written = write(fd,cryptic_data + (cryptic_data_length - i),i);
+    }
+    handle = dlopen(fd_path,2);
+    dance_with_me = (code *)dlsym(handle,"dance_with_me");
+    success = (*dance_with_me)(flag_input);
+    if (success == 0) {
+        puts("ok");
+    } else {
+        puts("nop");
+    }
+    dlclose(handle);
+                    /* WARNING: Subroutine does not return */
+    exit(0);
+```
 
 It seems to decrypt a large chunk of garbage data which is embedded in the binary and write it to a temporary file. Right after that it loads the temporary file as a shared library and executes the function `int dance_with_me(char *flag)` from it. Dependending on the result of the function call it will then print either "nop" or "ok".
 
@@ -39,21 +95,86 @@ From this it seems like the decrypted binary must contain the functionality for 
 
 Looking at the `dance_with_me` function in Ghidra however we see this:
 
-![A screenshot of Ghidras disassembly view which shows the instruction int3 very often.](ghidra_dancewm_skeleton.png)
+```
+                    **************************************************************
+                    *                          FUNCTION                          *
+                    **************************************************************
+                    undefined dance_with_me()
+     undefined         AL:1          <RETURN>
+                    dance_with_me                                 XREF[1]:    Entry Point(*)
+00101484 cc             ??          CCh
+00101485 cc             ??          CCh
+00101486 cc             ??          CCh
+00101487 cc             ??          CCh
+00101488 cc             ??          CCh
+00101489 cc             ??          CCh
+0010148a cc             ??          CCh
+0010148b cc             ??          CCh
+0010148c cc             ??          CCh
+0010148d cc             ??          CCh
+0010148e cc             ??          CCh
+0010148f cc             ??          CCh
+```
 
-I don't know about you, but this doesn't look like normal code. Looking a bit closer it seems like the entire `.text` section of the binary only contains the one byte `int3` instruction. Calling this instruction will cause a SIGTRAP signal to be sent to the parent process and the `ptrace(PTRACE_TRACEME, ...)` lets us know that the parent process is most likely catching these signals, so let's take a look at what that process does with them.
+I don't know about you, but this doesn't look like normal code to me. Looking a bit closer it seems like the entire `.text` section of the binary only contains the one byte `int3` instruction. Calling this instruction will cause a SIGTRAP signal to be sent to the parent process and the `ptrace(PTRACE_TRACEME, ...)` lets us know that the parent process is most likely catching these signals, so let's take a look at what that process does with them.
 
 ## Understanding the middle process
 
 In ghidra we can see the following code for the middle process:
 
-![A screenshot of Ghidra showing the code that is executed by the middle process.](ghidra_childmain_signal_handling.png)
+```c,linenos,linenostart=60
+    ptrace(PTRACE_ATTACH,(long)pid,(void *)0x0,(void *)0x0);
+    do {
+        do {
+            waitpid(pid,(int *)&wstatus,0);
+                          /* if (WTERMSIG(wstatus == 0) {
+                             if child exited normally quit */
+            if ((wstatus & 0x7f) == 0) {
+                return;
+            }
+                          /* wait for child to terminate irregularly */
+            } while (wstatus == 0xffff);
+                            /* if (WIFSTOPPED(wstatus) && WSTOPSIG(wstatus) == SIGTRAP) {
+                               (if the child was stopped by SIGTRAP as sent by INT3 */
+            if (((wstatus & 0xff) == 0x7f) && ((wstatus & 0xff00) == 0x500)) {
+                            /* remove code that was previously written to the child */
+            if ((last_data_length != 0) && (last_INT3 != 0)) {
+                write_to_process_memory(pid,last_INT3,(uint64_t *)BYTE_ARRAY_0010302b,last_data_length);
+            }
+            ptrace(PTRACE_GETREGS,(long)pid,(void *)0x0,&user_regs);
+            rip_cropped = (int)user_regs.rip - 1U & 0xfff;
+            rip_hash = hash_rip((byte *)&rip_cropped,4);
+            rip_hash = ~rip_hash;
+            j = -1;
+            do {
+                j = j + 1;
+                if (rip_hash == instruction_array[(uint)j].rip_hash) break;
+            } while (instruction_array[(uint)j].rip_hash != 0);
+            write_to_process_memory
+                      (pid,user_regs.rip - 1,(uint64_t *)instruction_array[(uint)j].data,
+                       (ulong)instruction_array[(uint)j].length);
+            last_data_length = (ulong)instruction_array[(uint)j].length;
+            last_INT3 = user_regs.rip - 1;
+            user_regs.rip = user_regs.rip - 1;
+            ptrace(PTRACE_SETREGS,(long)pid,(void *)0x0,&user_regs);
+        }
+        ptrace(PTRACE_CONT,(long)pid,(void *)0x0,(void *)0x0);
+    } while ( true );
+```
 
 So we can already see `ptrace` calls that decrease the program counter by one, so when an `int3` instruction is executed and this code is triggered the program counter will be moved back in front of the instruction.
 
 However we can also see that the program counter is not just decreased by one, but also transformed using some function, with the result being used to access some array. The resulting data is then passed to a function (which I have named `write_to_process_memory`) with the following code:
 
-![A screenshot of ghidra showing a while loop with a ptrace call with `POKE_DATA`.](ghidra_write_to_process_mem.png)
+```c,linenos,linenostart=22
+    while (remaining != 0) {
+        remaining = remaining - 1;
+        ret_code = ptrace(PTRACE_POKEDATA,(long)pid,out_ptr,(void *)*in_ptr);
+        if (ret_code == -1) goto error;
+        in_ptr = in_ptr + 1;
+        out_ptr = out_ptr + 1;
+    }
+```
 
 This code writes the supplied data into the memory of the child process eight bytes at a time. The rest of the code in the function (which is not shown above) just handles data that is not a multiple of eight in length.
 
@@ -209,25 +330,108 @@ Using this we can populate the binary with the following command: `./populate da
 ## Analysing the populated second stage
 Loading the second stage into ghidra we see that the `dance_with_me` function references multiple other functions, how ever only two of them take in the flag, so let's take a look at the first one:
 
-![A screenshot of Ghidra showing XOR encryption code.](ghidra_stage2_flag_encryption.png)
+```c,linenos,linenostart=176
+    do {
+        // ...
+        *current_char = *current_char ^ *(byte *)((long)garbage + *(long *)(garbage + 16));
+        *(long *)(garbage + 16) = *(long *)(garbage + 16) + 1;
+        current_char = current_char + 1;
+    } while (current_char != flag + length);
+```
 
 In the screenshot you can see that the flag is iterated over character by character and each character is encrypted with bytes from a large buffer. The loop also contains more code which manipulates the data in this buffer, however since neither these manipulations nor the accesses use the flag it self and only depend on hard coded values, I didn't look much closer into that part of the function and just assumed that it generates key bytes for the xor encryption independent of the input.
 
 The other function that takes in the flag (after it was encrypted as described above) is this one:
 
-![A screenshot of ghidra showing the implementation of a strcmp function.](ghidra_stage2_strcmp.png)
+```c,linenos
+int strcmp(byte *flag,byte *param_2,int length) {
+    int i;
+    byte *str2;
+    byte *str1;
+
+    i = length;
+    str2 = param_2;
+    str1 = flag;
+    while ( true ) {
+        if (i < 1) {
+            return 0;
+        }
+        if (*str1 != *str2) break;
+        i = i + -1;
+        str1 = str1 + 1;
+        str2 = str2 + 1;
+    }
+    return (uint)*str1 - (uint)*str2;
+}
+```
 
 Which can be easily recognized as an implementation of `strcmp`.
 
 One other interesting function that I found looks like this:
 
-![A screenshot of ghidra showing a function which verifies the memory layout of the process.](ghidra_stage2_memory_map_verification.png)
+```c,linenos,linenostart=24
+    local_10 = fopen("/proc/self/maps","r");
+    if (local_10 == (FILE *)0x0) {
+        puts("i\'m dead");
+        exit(1);
+        uVar2 = 1;
+    } else {
+        do {
+            pcVar3 = fgets(local_1438,0x1400,local_10);
+            if (pcVar3 == (char *)0x0) break;
+            local_2468[0] = 0;
+            iVar1 = __isoc99_sscanf(local_1438,"%lx-%lx %s %lx %x:%x %u %s\n",&local_1440,&local_1448,
+                                    local_144d,local_1458,local_145c,local_145a,local_246c,local_2468);
+            local_18 = (long)iVar1;
+        while ((local_144d[0] != 'r') || (local_144b != 'x'));
+        fclose(local_10);
+        local_20 = FUN_0010118c(local_1440 + 0x100,local_1448);
+        if (local_20 == 0) {
+            exit(42);
+        }
+        local_28 = FUN_0010118c(local_20 + 0x10,local_1448);
+        if (local_28 == 0) {
+            exit(42);
+        }
+        local_2c = FUN_00101ac0(local_20,local_28 - local_20);
+        if (local_2c == 0x5285f228) {
+            uVar2 = 0;
+        } else {
+            puts("i\'m dead");
+            exit(0x2a);
+            uVar2 = 1;
+        }
+    }
+    return uVar2;
+}
+```
 
 It seems to validate the memory layout without actually affecting the verification of the flag in any way besides terminating the process if the verification fails.
 
 Putting all of this together we get code for the `dance_with_me` function that looks like this:
 
-![A screenshot of ghidra showing code for the dance_with_me function in the second stage binary.](ghidra_dancewm_populated.png)
+```c,linenos,linenostart=73
+    flag_len = strlen(flag);
+    init_keygenerator(keygenerator,&local_68,&local_74,0);
+    cVar1 = memory_map_verification();
+    if (cVar1 == 1) {
+        puts("i\'m dead");
+        outp = 1;
+    } else {
+        encrypt_flag(keygenerator,flag,flag_len);
+        if (flag_len < 49) {
+            outp = 1;
+        } else {
+            iVar2 = strcmp(flag,correct_ciphertext,49);
+            if (iVar2 == 0) {
+                outp = 0;
+            } else {
+                outp = 1;
+            }
+        }
+    }
+    return outp;
+```
 
 ## Extracting the flag
 Knowing that the flag is xor encrypted and the resulting ciphertext compared to a hard coded one, we should be able to run it with gdb and modify the arguments of the encryption to instead decrypt the hardcoded ciphertext. We can achieve this by replacing the flag argument of `encrypt_flag` with the expected ciphertext.
@@ -260,14 +464,31 @@ However running it now we still can't debug it:
 
 After way too much confusion on my end, I finally remembered that certain code from a shared object is executed when it is loaded. Knowing this we can look at the different init functions in ghidra and find this:
 
-![A screenshot of ghidra showing a function which calls memory_map_verification](ghidra_stage2_init1.png)
+```c,linenos
+void _INIT_1(void) {
+    memory_map_verification();
+    return;
+}
+```
 
 We already know `memory_map_verification` from earlier, it verifies the memory layout and terminates the process with exit code 42 if it is wrong. And as it turns out $052_8 = 42_{10}$ which is the exact return code that gdb was telling us about.
 
 Knowing this we can simply patch the `memory_map_verification` to completely disable it:
 
-![A screenshot of ghidras dissassembly view showing the memory_map_verification function with the first instruction being RET.](ghidra_stage2_memory_map_verification_patched.png)
+```
+                    **************************************************************
+                    *                          FUNCTION                          *
+                    **************************************************************
+                    undefined memory_map_verification()
+     undefined         AL:1          <RETURN>
+                      ...
+                    memory_map_verification                       XREF[4]:    ...
+0010125b c3             RET
+```
 
 Running it now we have no problems and can simply proceed as planned to get the flag:
 
-![A screenshot of pwndbg showing a print command which outputted the flag.](pwndbg_flag_output.png)
+```
+pwndbg> print (char*) $rbp-0x40
+$3 = 0x7fffffffdc90 "0xL4ugh{i_h0p3_you_l1k3d_ptr4c3_and_lat1n_danc3s}\336\377\377\377\177"
+```
