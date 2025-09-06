@@ -6,5 +6,6 @@
 {% if page.updated %}
 <p><b>Last Updated: {{ page.updated | date(format='%Y-%m-%d') }}</b></p>
 {% endif %}
+<hr>
 {{ page.content | safe }}
 {% endblock content %}
