@@ -18,8 +18,9 @@
     }
 }
 
-* {
+:root {
     color: var(--col-main);
+    background: var(--col-background);
 }
 
 /* General Arangment */
@@ -37,7 +38,6 @@ body {
     margin: 0 auto;
     font-size: 1.1em;
     font-family: Menlo, Consolas, Monaco, Adwaita Mono, Liberation Mono, Lucida Console, monospace; /* See: https://systemfontstack.com/ */
-    background: var(--col-background);
 }
 
 main {
