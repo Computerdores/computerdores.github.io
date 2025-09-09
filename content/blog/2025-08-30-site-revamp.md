@@ -1,6 +1,7 @@
 ---
 title: Site Revamp
-date: 2025-09-05
+date: 2025-08-30
+updated: 2025-09-09
 draft: true
 ---
 
@@ -12,11 +13,16 @@ For those that don't know (I didn't): A [webring](https://wikipedia.org/wiki/web
 What fascinated me about this was that this was a relic of the old internet which I had believed to have died when social media came around.
 Yet here it was, alive and well, just hidden from view waiting for one to find a website from which to start *surfing*.
 
-- had a nice evening
-- kind of forgot about it for a while
-- thought of it again
-  - had a blast *again*
-- decided to redo my site in the spirit of it
-  - old was also ugly
+After proceeding to spend the entire evening reading around various blogs, I kind of forgot about it for a while due to a lack of spare time.
+Then, a couple of days before starting to write this, I remembered that afternoon and fell down the rabbit hole *again*.
+Several hours later, having already been unhappy with uninspired, bland state my website was in at this point, I decided I would completely revamp it.
 
+- designed to last
+  - resonated with me (shoutout SKG)
+  - already had experienced the pain of updating jekyll template
+- dark theme club
+  - duh
+- 250KB club
+  - wth not?
 - https://systemfontstack.com/
+  - I never liked linked to google etc. anyways
