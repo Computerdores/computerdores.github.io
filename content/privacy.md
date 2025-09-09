@@ -1,6 +1,7 @@
 ---
 title: Privacy Policy
 date: 2025-09-05
+updated: 2025-09-06
 ---
 
 ## General
