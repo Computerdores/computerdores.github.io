@@ -1,8 +1,10 @@
 ---
 title: Site Revamp
-date: 2025-08-30
+date: 2025-09-10
 updated: 2025-09-09
 draft: true
+extra:
+  started_writing: 2025-08-30
 ---
 
 So, one afternoon, a couple of months ago, I got bored and ended up browsing the dark web.
@@ -23,6 +25,8 @@ Several hours later, having already been unhappy with uninspired, bland state my
 - dark theme club
   - duh
 - 250KB club
-  - wth not?
+  - why not?
+- nojs club
+  - wth do I want with js
 - https://systemfontstack.com/
   - I never liked linked to google etc. anyways
