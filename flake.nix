@@ -11,6 +11,9 @@
                 buildInputs = with pkgs; [
                     zola
                 ];
+                shellHook = ''
+                    PS1="''${PS1/\\n/\\n(website) }"
+                '';
             };
         }
     );
