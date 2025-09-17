@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Computerdores</title>
+    <link rel="self" type="application/atom+xml" href="https://jann.stute.dev/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://jann.stute.dev"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2025-09-14T00:00:00+00:00</updated>
+    <id>https://jann.stute.dev/atom.xml</id>
+    <entry xml:lang="en">
+        <title>Site Revamp</title>
+        <published>2025-09-14T00:00:00+00:00</published>
+        <updated>2025-09-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/blog/site-revamp/"/>
+        <id>https://jann.stute.dev/blog/site-revamp/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/blog/site-revamp/">&lt;p&gt;So, one afternoon, a couple of months ago, I got bored and ended up browsing the dark web.
+Against my expectations I quickly found myself back on the clear web on an obscure blog whose .onion address had been linked to on a link list.
+Reading around the blog proved fascinating, not necessarily for the content of it (eventhough there was some interesting stuff there, see &lt;a href=&quot;https:&#x2F;&#x2F;artemislena.eu&#x2F;&quot;&gt;artemislena.eu&lt;&#x2F;a&gt;), but more so for something it linked to: &lt;u&gt;A webring&lt;&#x2F;u&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;For those that don&#x27;t know (I didn&#x27;t): A &lt;a href=&quot;https:&#x2F;&#x2F;wikipedia.org&#x2F;wiki&#x2F;webring&quot;&gt;webring&lt;&#x2F;a&gt; basically consists of a bunch of websites that link to each other in a circle, usually with some kind of common theme and a common navigation bar.
+What fascinated me about this was that this was a relic of the old internet which I had believed to have died when social media came around.
+Yet here it was, alive and well, just hidden from view waiting for one to find a website from which to start &lt;em&gt;surfing&lt;&#x2F;em&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;After proceeding to spend the entire evening reading around various blogs, I kind of forgot about it for a while due to a lack of spare time.
+Then, a couple of days before starting to write this, I remembered that afternoon and fell down the rabbit hole &lt;em&gt;again&lt;&#x2F;em&gt;.
+Several hours later, having already been unhappy with the uninspired, bland state my website was in at this point, I decided I would completely revamp it.&lt;&#x2F;p&gt;
+&lt;p&gt;For this I had a couple of things in mind that I noticed while surfing which I wanted to adopt for my website.
+First of I wanted to keep any and all javascript off of my site.
+This is because I don&#x27;t have any ambitions for this place beyond publishing my writeups and writing the occasional blog post and such things should not require javascript.
+Additionally this should hopefully make the website work properly in terminal based browsers.&lt;&#x2F;p&gt;
+&lt;p&gt;Another thing I came across is Jeff Huang&#x27;s post &lt;a href=&quot;https:&#x2F;&#x2F;jeffhuang.com&#x2F;designed_to_last&#x2F;&quot;&gt;&quot;This Page is Designed to Last&quot;&lt;&#x2F;a&gt;.
+It advocates for building web sites in ways that prevent them from requiring active maintenance to keep up since this maintenance typically dries up before the hosting does.
+As someone who also really likes the &lt;a href=&quot;https:&#x2F;&#x2F;www.stopkillinggames.com&#x2F;&quot;&gt;Stop Killing Games&lt;&#x2F;a&gt; Movement, this immediately resonated with me since it also makes archival easier.
+As a part of this I also switched from Jekyll, a Static Site Generator (SSG), which I was using previously to Zola, another SSG, because it is much simpler and faster and should thus simplify maintenance.
+I also switched to using a system font stack in order to speed up page loads and avoid hotlinking to external font providers like Google (also &lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=W_rGq5K_i3Q&quot;&gt;cuz fuck em that&#x27;s why&lt;&#x2F;a&gt;).
+In the same vein I try to avoid increasing the (compressed) size of the entire site too much to make load times faster and archival easier (also I want the 250KB club badge).&lt;&#x2F;p&gt;
+&lt;p&gt;Lastly, since I like getting flash banged at 01:00 o&#x27;clock as little as the next guy&#x2F;girl I want my page to have a proper dark mode and light mode without people needing to use dark reader.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>About</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/about/"/>
+        <id>https://jann.stute.dev/about/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/about/">&lt;p&gt;Hi! I&#x27;m Jann, a 21 year old computer science student from Germany.&lt;&#x2F;p&gt;
+&lt;p&gt;I am active in the cybersecurity club of my university and spend some of my free time contributing to open-source projects, mainly &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;TagStudioDev&#x2F;TagStudio&quot;&gt;TagStudio&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I also maintain a small NAS at home to host some services for myself. Said NAS also collects comment &#x2F; guestbook submissions on this site for me to review later, so if that is broken you know why.&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to reach out feel free to leave a message in the &lt;a href=&quot;https:&#x2F;&#x2F;jann.stute.dev&#x2F;guestbook&#x2F;&quot;&gt;guestbook&lt;&#x2F;a&gt; or checkout my &lt;a href=&quot;https:&#x2F;&#x2F;jann.stute.dev&#x2F;contact&#x2F;&quot;&gt;contacts&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Contact</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/contact/"/>
+        <id>https://jann.stute.dev/contact/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/contact/">&lt;p&gt;E-Mail: jann.stute [ät] protonmail.com&lt;&#x2F;p&gt;
+&lt;p&gt;Github: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;Computerdores&quot;&gt;Computerdores&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Gitlab: &lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;JannStute&quot;&gt;JannStute&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Guestbook</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/guestbook/"/>
+        <id>https://jann.stute.dev/guestbook/</id>
+        
+        <summary type="text">Leave a Message!</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Privacy Policy</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/privacy/"/>
+        <id>https://jann.stute.dev/privacy/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/privacy/">&lt;h2 id=&quot;general&quot;&gt;General&lt;&#x2F;h2&gt;
+&lt;p&gt;I currently use GitHub Pages to host the static content of this site so anything transmitted by your browser is subject to whatever they do with it. This may change in the future (e.g. I may decide to self-host it instead).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;forms&quot;&gt;Forms&lt;&#x2F;h2&gt;
+&lt;p&gt;When you submit a form on this website, the following is collected:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Any data entered into the form&lt;&#x2F;li&gt;
+&lt;li&gt;Your IP address&lt;&#x2F;li&gt;
+&lt;li&gt;Your User Agent String&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;What happens to that data:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Data entered in forms &lt;em&gt;may&lt;&#x2F;em&gt; be published on the site
+&lt;ul&gt;
+&lt;li&gt;Typically in the form of guestbook entries, referrer statistic, comments, etc.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;IP and UA String will not be published&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and will be retained until I clean up my logs.
+&lt;ul&gt;
+&lt;li&gt;This is mostly in case of spamming&#x2F;DoS&#x2F;etc. so I can investigate.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Please Note: In order to delete a message in the future you will have to be able to prove that it was you who posted it.
+Typical ways of doing this would be providing a link to your website (one which you have control over) with the original message or signing your message with a public key&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;.
+I have this policy, because allowing anyone to request deletion of a guestbook entry&#x2F;comment would allow trolls and other bad faith actors to enact censorship on them.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;Nor will any third-party be allowed to access it in any way. Only exception could be if someone helps me with system maintenance, my NAS is stolen ^^, or something similar.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;Note that any information provided for this purpose will be stored in the public git repository of this website, so a shared secret like a password will not work.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;h2 id=&quot;changes&quot;&gt;Changes&lt;&#x2F;h2&gt;
+&lt;p&gt;Any changes to this privacy policy will be published here.
+In order to be notified of changes to this page you can subscribe to the &lt;a href=&quot;&#x2F;rss.xml&quot;&gt;RSS&lt;&#x2F;a&gt;&#x2F;&lt;a href=&quot;&#x2F;atom.xml&quot;&gt;Atom&lt;&#x2F;a&gt; Feeds.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>GPN - &#x27;Honeypot&#x27;</title>
+        <published>2025-07-09T20:00:00+02:00</published>
+        <updated>2025-07-09T20:00:00+02:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/gpn2025-honeypot/"/>
+        <id>https://jann.stute.dev/writeups/gpn2025-honeypot/</id>
+        
+        <summary type="text">A writeup for the &#x27;honeypot&#x27; challenge from the GPN 2025.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>CSCG - &#x27;echofaas&#x27;</title>
+        <published>2025-05-01T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/cscg-echofaas/"/>
+        <id>https://jann.stute.dev/writeups/cscg-echofaas/</id>
+        
+        <summary type="text">A writeup for the &#x27;echofaas&#x27; challenge from the CSCG 2025.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>0xL4ugh - &#x27;dance&#x27;</title>
+        <published>2024-06-24T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/crackme/stoopids-dance/"/>
+        <id>https://jann.stute.dev/writeups/crackme/stoopids-dance/</id>
+        
+        <summary type="text">A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>GPN - &#x27;Archventure Time&#x27;</title>
+        <published>2024-06-05T12:00:00+02:00</published>
+        <updated>2024-06-05T12:00:00+02:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/gpn2024-archventure-time/"/>
+        <id>https://jann.stute.dev/writeups/gpn2024-archventure-time/</id>
+        
+        <summary type="text">A writeup for the &#x27;Archventure Time&#x27; challenge from the GPN 2024.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>0xL4ugh - &#x27;nano&#x27;</title>
+        <published>2024-05-21T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/crackme/stoopids-nano/"/>
+        <id>https://jann.stute.dev/writeups/crackme/stoopids-nano/</id>
+        
+        <summary type="text">A writeup for a reversing challenge from the 0xL4ugh CTF involving assembly level obfuscation and cross process fault handling.</summary>
+        
+    </entry>
+</feed>
