@@ -1,5 +1,5 @@
 ---
-title: "0xL4ugh Writeup: 'dance'"
+title: "0xL4ugh - 'dance'"
 description: "A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification."
 date: 2024-06-24
 updated: 2025-09-06

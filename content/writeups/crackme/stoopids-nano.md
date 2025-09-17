@@ -1,5 +1,5 @@
 ---
-title: "0xL4ugh Writeup: 'nano'"
+title: "0xL4ugh - 'nano'"
 description: "A writeup for a reversing challenge from the 0xL4ugh CTF involving assembly level obfuscation and cross process fault handling."
 date: 2024-05-21
 updated: 2025-09-06

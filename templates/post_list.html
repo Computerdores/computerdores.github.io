@@ -1,6 +1,6 @@
 {% for post in section.pages %}
 <p>
-    <span>{{ post.date }}</span>
+    <span>{{ post.date | date(format="%Y-%m-%d") }}</span>
     <a href="{{ post.permalink }}">{{post.title}}</a>
 </p>
 {% endfor %}
