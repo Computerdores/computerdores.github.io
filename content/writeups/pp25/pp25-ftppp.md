@@ -28,6 +28,8 @@ tags: ["Platypwn", "Platypwn 2025"]
 
 **Flag:** `PP{b1n4ry_p4tch_d1ff1ng_ftw}`
 
+**Challenge Source**: Planned to be published; not done at time of writing
+
 # Recon
 
 We get access to a running instance of ProFTPD, upon logging in with the provided credentials[^1] there are a couple of files we can download:
