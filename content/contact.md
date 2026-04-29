@@ -10,3 +10,5 @@ E-Mail: jann.stute [ät] protonmail.com
 Github: [Computerdores](https://github.com/Computerdores)
 
 Gitlab: [JannStute](https://gitlab.com/JannStute)
+
+Mastodon: [@computerdores@chaos.social](https://chaos.social/@computerdores)
