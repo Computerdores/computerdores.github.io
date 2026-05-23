@@ -2,6 +2,7 @@
 title: "Analysing the Panchan Botnet"
 description: "A writeup analysing a malware sample of the panchan botnet."
 date: 2026-05-23
+updated: 2026-05-23
 categories: ["writeups"]
 ---
 
@@ -22,11 +23,11 @@ Since I have not previously worked with golang binaries there were a couple of i
 1. Golang binaries, even when stripped, usually contain a `.gopclntab` section which contains a lot of useful metadata that is usually only part of the stripped debug information (function names, type names, some struct definitions, string locations, ...)
 2. Ghidra has support for the golang calling conventions, however, to use these the compiler of the binary has to be set to "golang", instead of the default "gcc".
 
-Generally the malware is structured in a relatively modular fashion.
+Generally, the malware is structured in a relatively modular fashion.
 Each module gets initialised by the entrypoint and implements different functionality, with some cooperation.
 The malware also has call-home functionality which originally informed the operator of newly infected clients.
 However, this was implemented using a hardcoded discord webhook url which has since broken.
-The auto-incrementing ID of the webhook (960954050583613549) indicates that the webhook was created before early 2025 and after mid 2021[^1].
+The auto-incrementing ID of the webhook indicates that the webhook was created before early 2025 and after mid 2021[^1].
 Further, the malware implements persistence by copying itself to `/bin/systemd-worker` and creating a systemd service (`systemd-worker.service`)
 
 **Spreader** - This module implements worming functionality to spread the malware.
@@ -104,7 +105,7 @@ The following subsections will point out some of the differences between these a
 
 ### Akamai
 
-- https://www.akamai.com/blog/security-research/new-p2p-botnet-panchan
+- Source: [www.akamai.com](https://www.akamai.com/blog/security-research/new-p2p-botnet-panchan)
 - 4 years old (published 2022-06-15)
 - several differences
 - older version of the botnet
@@ -116,7 +117,7 @@ The following subsections will point out some of the differences between these a
 
 ### Nozomi Networks Labs
 
-- https://www.nozominetworks.com/blog/the-evolving-panchan-botnet
+- Source: [www.nozominetworks.com](https://www.nozominetworks.com/blog/the-evolving-panchan-botnet)
 - 2 years old (published 2024-07-18)
 - overserved same hash of malware
 - corroborates my findings
@@ -124,7 +125,7 @@ The following subsections will point out some of the differences between these a
 
 ### klavansec
 
-- https://klavansec.substack.com/p/we-mapped-a-live-p2p-botnet-from
+- Source: [klavansec.substack.com](https://klavansec.substack.com/p/we-mapped-a-live-p2p-botnet-from)
 - 3-4 months old (published 2026-02-11)
 - overserved same hash of malware
 - they observe seeing the same hash and suggest that this might be a secondary operator
@@ -148,4 +149,4 @@ The following subsections will point out some of the differences between these a
 - all of this leads me to believe that the article was written by an LLM without the substantive human review that is necessary
   - this puts the acuracy of the entire article into question
 
-[^1]: Discord webhook ids were around 1370000000000000000 in early 2025 and around 850000000000000000 in mid 2021.
+[^1]: Discord webhook ids were around 1370000000000000000 in early 2025 and around 850000000000000000 in mid 2021. While the ID of the webhook used in the malware is 960954050583613549.
