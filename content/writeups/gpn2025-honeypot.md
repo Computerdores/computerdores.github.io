@@ -2,7 +2,7 @@
 title: "GPN - 'Honeypot'"
 description: "A writeup for the 'honeypot' challenge from the GPN 2025."
 date: 2025-07-09T20:00:00+02:00
-categories: ["Writeups", "rev"]
+categories: ["writeups", "rev"]
 tags: ["GPN", "GPN 2025"]
 ---
 

@@ -3,7 +3,7 @@ title: "CSCG - 'echofaas'"
 description: "A writeup for the 'echofaas' challenge from the CSCG 2025."
 date: 2025-05-01
 updated: 2025-09-06
-categories: ["Writeups", "pwn"]
+categories: ["writeups", "pwn"]
 tags: ["CSCG", "CSCG 2025"]
 ---
 

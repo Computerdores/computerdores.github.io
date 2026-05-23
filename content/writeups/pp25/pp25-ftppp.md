@@ -2,7 +2,7 @@
 title: "PP25 - 'FTP++'"
 description: "A writeup for the 'FTP++' challenge from the Platypwn 2025."
 date: 2025-11-15
-categories: ["Writeups", "rev"]
+categories: ["writeups", "rev"]
 tags: ["Platypwn", "Platypwn 2025"]
 ---
 

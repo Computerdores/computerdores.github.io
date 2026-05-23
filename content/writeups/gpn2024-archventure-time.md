@@ -2,7 +2,7 @@
 title: "GPN - 'Archventure Time'"
 description: "A writeup for the 'Archventure Time' challenge from the GPN 2024."
 date: 2024-06-05T12:00:00+02:00
-categories: ["Writeups", "rev"]
+categories: ["writeups", "rev"]
 ctfs: ["GPN", "GPN 2024"]
 ---
 
