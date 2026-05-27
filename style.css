@@ -1,0 +1,155 @@
+/* Theme - Dark */
+:root {
+    --col-main: #FFFFCC;
+    --col-background: #00000A;
+    --col-accent-dark: #770000;
+    --col-accent-normal: #DD0000;
+    --col-accent-light: #FF0000;
+}
+
+/* Theme - Light */
+@media (prefers-color-scheme: light) {
+    :root {
+        --col-main: #00000A;
+        --col-background: #FFFFCC;
+        --col-accent-dark: #000077;
+        --col-accent-normal: #0000AA;
+        --col-accent-light: #0000FF;
+    }
+}
+
+:root {
+    color: var(--col-main);
+    background: var(--col-background);
+}
+
+/* General Arangment */
+html {
+    height: 100%;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 765px;
+    margin: 0 auto;
+    font-size: 1.1em;
+    font-family: Menlo, Consolas, Monaco, "Adwaita Mono", "Liberation Mono", "Lucida Console", monospace; /* See: https://systemfontstack.com/ */
+}
+
+header * {
+    width: fit-content;
+    margin: 25px auto;
+}
+
+main {
+    flex: 1;
+}
+
+footer {
+    margin-top: 50px;
+}
+
+footer > p {
+    text-align: center;
+}
+
+footer span {
+    display: inline-block;
+}
+
+/* Links */
+a:any-link {
+    color: var(--col-accent-normal);
+}
+
+/* Footnotes */
+
+.footnote-definition {
+    border: 1px #FFF4 solid;
+    padding: 5px;
+}
+
+.footnote-definition > p {
+    display: initial;
+}
+
+/* Code Blocks */
+/* Default code block style for zola, see: https://www.getzola.org/documentation/content/syntax-highlighting/#styling-codeblocks */
+pre {
+    padding: 1rem;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+  /** The line numbers already provide some kind of left/right padding **/
+pre[data-linenos] {
+    padding: 1rem 0;
+}
+pre table td {
+    padding: 0;
+}
+  /** The line number cells **/
+pre table td:nth-of-type(1) {
+    text-align: center;
+    vertical-align: top;
+    user-select: none;
+}
+pre mark {
+    display: block;
+}
+pre table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* Quotes */
+blockquote {
+    padding: 1px;
+    background: #FFF2;
+    border-left: 3px solid #FFF8;
+}
+
+blockquote > p {
+    margin: 15px;
+}
+
+/* Images */
+img {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Forms */
+input, textarea, button {
+    background: var(--col-background);
+}
+
+form {
+    display: grid;
+    row-gap: 5px;
+}
+
+form > .col1 {
+    grid-column: 1;
+}
+
+form > .col2 {
+    grid-column: 2;
+}
+
+form > .col12 {
+    grid-column: 1 / span 2;
+}
+
+form > button {
+    width: fit-content;
+    margin: 0 auto;
+}
+
+form > span > textarea {
+    width: 100%;
+    margin-top: 2px;
+}
