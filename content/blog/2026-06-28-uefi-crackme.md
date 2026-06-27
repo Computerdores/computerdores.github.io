@@ -22,7 +22,7 @@ Which immediately prompted the question: "What the hell is an Unlock Password an
 After a bit of googling, it seemed to me that this is intended to be a way for Acer to sell UEFI unlocks to people, with the key being used as a nonce.
 
 And while, later the same day, I managed to guess my UEFI password (it was "1"), I was immediately hooked on reversing this.
-Afterall, this is basically an in-the-wild crackme and with CTF kinda, sorta, maybe being dead, I am a rev-starved rev-addict.
+Afterall, this is basically an in-the-wild crackme and with CTF [kinda, sorta, maybe being dead](https://kabir.au/blog/the-ctf-scene-is-dead), I am a rev-starved rev-addict.
 
 ## Extracting UEFI image
 
