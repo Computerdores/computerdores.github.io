@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>Uefi Crackme</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="https://jann.stute.dev/atom.xml">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="https://jann.stute.dev/rss.xml">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="https:&#x2F;&#x2F;jann.stute.dev&#x2F;blog&#x2F;uefi-crackme&#x2F;">
+    
+    
+
+<link rel="stylesheet" href="/syntax.css">
+
+</head>
+
+<body>
+    <header>
+        <h1>Computerdores</h1>
+        <nav>
+            [<a href="https://jann.stute.dev">home</a>]
+            [<a href="https://jann.stute.dev/blog/">blog</a>]
+            [<a href="https://jann.stute.dev/writeups/">writeups</a>]
+            [<a href="https://jann.stute.dev/guestbook/">guestbook</a>]
+            [<a href="https://jann.stute.dev/about/">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        
+<h1>UEFI Crackme</h1>
+<p><b>Written: 2026-06-28</b></p>
+
+<hr>
+<p>Recently, my laptop (an Acer A315-23) decided to randomly enable secure boot and since my linux install is obviously not signed, it proceeded to not boot anymore.
+Given that I had work to do, I immediately went to disable it, only to realise I had at some point set a password for my UEFI.
+The only problem: I didn't remember it, only that I had set something simple.
+And so it happened that I tried 3 incorrect UEFI passwords and was greeted with this:</p>
+<pre class="z-code"><code><span class="z-text z-plain">┌────────────────────────────────────────┐
+</span><span class="z-text z-plain">│ Enter Unlock Password(Key: xxXXxxXXxx) │
+</span><span class="z-text z-plain">├────────────────────────────────────────┤
+</span><span class="z-text z-plain">│█                                       │
+</span><span class="z-text z-plain">└────────────────────────────────────────┘
+</span></code></pre>
+<p>Which immediately prompted the question: "What the hell is an Unlock Password and why is it telling me about a key?"
+After a bit of googling, it seemed to me that this is intended to be a way for Acer to sell UEFI unlocks to people, with the key being used as a nonce.</p>
+<p>And while, later the same day, I managed to guess my UEFI password (it was "1"), I was immediately hooked on reversing this.
+Afterall, this is basically an in-the-wild crackme and with CTF <a href="https://kabir.au/blog/the-ctf-scene-is-dead">kinda, sorta, maybe being dead</a>, I am a rev-starved rev-addict.</p>
+<h2 id="extracting-uefi-image">Extracting UEFI image</h2>
+<p>The first step was of course getting my hands on a UEFI image I can reverse.
+Luckily, Acer provides a seemingly complete list of released versions of the UEFI firmware with download links on their website.</p>
+<p>After downloading the image for the version currently installed on my Laptop (1.19), it took me quite a bit to actually get something to reverse.
+Because as all manufacturers seem to do, Acer ships a single executable UEFI updater that you are supposed to run.
+Using binwalk's <code>--extract</code> functionality quickly yielded me a bunch of files, whose names seemed reminiscent of extracted Insyde UEFI's I had found <a href="https://github.com/eabase/UEFI-Repair-Guide-Wiki/blob/master/Insyde-Flash-Firmware-Tool-(H2OFFT).md">online</a>.
+After some googling, I was able to identify two of the included files as UEFI image files: <code>Z8E_multi.fd</code> and <code>Z8E2_multi.fd</code>.</p>
+<p>At this point I found the <code>uefitool</code> package with the <code>uefiextract</code> tool.
+I used this to extract a bunch of PE32 EFI modules from the image (I used <code>Z8E2_multi.fd</code>, the stuff relevant to this post seemed to be the same in both files).
+Looking through those modules, it wasn't long until I found my target: <code>A01UnlockPassword</code>.</p>
+<h2 id="reversing-the-uefi-module">Reversing the UEFI Module</h2>
+<p>Looking into the UEFI module my first step was to look for the strings I had already seen while interacting with the unlock mechanism.
+I was quickly able to identify this formatting call:</p>
+<pre data-lang="C" class="language-C z-code"><code class="language-C" data-lang="C"><span class="z-source z-c"><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">sub_4014d0</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">msg<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>200</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-string z-quoted z-double z-c"><span class="z-storage z-type z-string z-c">u</span><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span><span class="z-constant z-other z-placeholder z-c">%s</span>(Key:<span class="z-constant z-other z-placeholder z-c">%s</span>)<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-separator z-c">,</span> buffer</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p>Which lead me to this string comparison of a string computed in the same method:</p>
+<pre data-lang="C" class="language-C z-code"><code class="language-C" data-lang="C"><span class="z-source z-c"><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">generate_upw_bin</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-keyword z-operator z-c">&amp;</span>buf<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>a</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>out</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span><span class="z-source z-c"><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">bytes_to_wstr</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-keyword z-operator z-c">&amp;</span>out<span class="z-punctuation z-separator z-c">,</span> unlock_password</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span><span class="z-source z-c"><span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> ...
+</span></span><span class="z-source z-c"><span class="z-keyword z-control z-c">else</span> <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">wstrcmp</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">unlock_password<span class="z-punctuation z-separator z-c">,</span> input<span class="z-keyword z-operator z-ternary z-c">?</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-section z-group z-end z-c">)</span></span>
+</span><span class="z-source z-c">    rsi <span class="z-keyword z-operator z-assignment z-c">=</span> EFI_SECURITY_VIOLATION<span class="z-punctuation z-terminator z-c">;</span>
+</span></code></pre>
+<p>And while I had obviously not named these methods as you see them here yet, it did immediately seem like this comparison would be the actual check.
+From here I discovered that the only input for the generation (the "Key" we are shown) seemed to be a value loaded from a UEFI Variable in the parent function:</p>
+<pre data-lang="C" class="language-C z-code"><code class="language-C" data-lang="C"><span class="z-source z-c">VariableName <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-string z-quoted z-double z-c"><span class="z-storage z-type z-string z-c">u</span><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>AUPS<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-terminator z-c">;</span> <span class="z-comment z-line z-double-slash z-c"><span class="z-punctuation z-definition z-comment z-c">//</span> with fallback to u&quot;AUPH&quot; and u&quot;AUPU&quot; if variable is not set
+</span></span><span class="z-source z-c">status <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-variable z-other z-readwrite z-global z-mac-classic z-c">gRT</span><span class="z-punctuation z-accessor z-c">-&gt;</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">GetVariable</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">VariableName<span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>UnknownVendorGuid<span class="z-punctuation z-separator z-c">,</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>DataSize<span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>variable_data</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span><span class="z-source z-c">result_1 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">ask_unlock_pw</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">char</span><span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span>arg1 <span class="z-keyword z-operator z-arithmetic z-c">-</span> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>30</span><span class="z-punctuation z-separator z-c">,</span> variable_data<span class="z-punctuation z-separator z-c">,</span> arg2<span class="z-punctuation z-separator z-c">,</span> r9_2</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span><span class="z-source z-c">
+</span><span class="z-source z-c"><span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>result_1 <span class="z-keyword z-operator z-comparison z-c">&gt;=</span> EFI_SUCCESS<span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span><span class="z-source z-c"><span class="z-meta z-block z-c">    <span class="z-variable z-other z-readwrite z-global z-mac-classic z-c">gRT</span><span class="z-punctuation z-accessor z-c">-&gt;</span><span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">SetVariable</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">VariableName<span class="z-punctuation z-separator z-c">,</span> <span class="z-keyword z-operator z-c">&amp;</span>UnknownVendorGuid<span class="z-punctuation z-separator z-c">,</span> 
+</span></span></span></span><span class="z-source z-c"><span class="z-meta z-block z-c"><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">        EFI_VARIABLE_NON_VOLATILE <span class="z-keyword z-operator z-arithmetic z-c">|</span> EFI_VARIABLE_BOOTSERVICE_ACCESS
+</span></span></span></span><span class="z-source z-c"><span class="z-meta z-block z-c"><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">            <span class="z-keyword z-operator z-arithmetic z-c">|</span> EFI_VARIABLE_RUNTIME_ACCESS<span class="z-punctuation z-separator z-c">,</span> 
+</span></span></span></span><span class="z-source z-c"><span class="z-meta z-block z-c"><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">        <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-separator z-c">,</span> nullptr</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-source z-c"><span class="z-meta z-block z-c">    result <span class="z-keyword z-operator z-assignment z-c">=</span> EFI_SUCCESS<span class="z-punctuation z-terminator z-c">;</span>
+</span></span><span class="z-source z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></code></pre>
+<p>As you can see all candidates for the varible name contain "AUP" which probably stands for "Acer Unlock Password".
+These variables are all associated with the UEFI Vendor GUID <code>89CB0E8D-393C-4830-BFFF65D9147E8C3B</code>, which I was not able to conclusively attribute.
+I suspect that it belongs either to Acer or to Insyde, since the latter is/was also involved in the development of this UEFI FW.</p>
+<p>We can also see that the variable is cleared, if the unlock password (UPW) is entered correctly, making sure that each UPW can only be used once.
+I also found the function responsible for generating new keys for the UPW generation, however, it makes use of several non-standard UEFI protocols and the current time, so I didn't look into it further.</p>
+<h2 id="firmware-rehosting">Firmware Rehosting</h2>
+<p>Before getting into the weeds on reversing the generation process, I first wanted to make sure I could validate partial findings and debug a future reimplementation of the process.
+For this I turned to firmware rehosting using unicorn.</p>
+<p>I wrote up a ~100 line python script that would load the PE32 into memory and prepare the emulator for running the <code>generate_upw_bin</code> function on its own.
+For this I simply had it load the necessary parameters for the function into memory and wrote some hooks to tell me intermediate results and stop execution after the function was finished.</p>
+<p>This meant that on the second evening of this project, I was already able to generate Unlock Passwords via this rehosting setup.</p>
+<h2 id="reversing-the-upw-generation">Reversing the UPW generation</h2>
+<p>With this context information I decided to dive into the function I called <code>generate_upw_bin</code>.
+It is responsible for generating an 8 byte value whose hex representation will be the UPW.
+The only input it takes is the ascii decimal representation of the key.</p>
+<p>Looking into the function, I could see that it is made up of three steps that each yield an intermediate buffer.
+Because I suspected that they didn't come up with this entirely on their own, I used an LLM to help identify these steps and was met with great success.
+After validating the claims of LLM via my rehosting setup, I had already minimal python code for two thirds of the process.
+It turned out that the first step was simply calculating the SHA 256 digest, while the third step was just calculating the reversed ECMA182 variant of CRC64.</p>
+<p>This left just the second step to reverse engineer, which proved a little more interesting.
+It turns out that they implemented two custom shuffling routines, which produce a plaintext and a key from the SHA 256 digest.
+These are then fed into 10-round AES128 and the resulting cipher text is fed into the aforementioned CRC64 to produce the final output.</p>
+<h2 id="password-generator">Password Generator</h2>
+<p>With the insights gained from reverse engineering this, it was relatively simple to write a python reimplementation of the password generation.
+I was debating whether to release this, however, during my research I found a third party website where you can buy these Unlock Passswords.
+And the existance of this third party site means that any modicum of a security benefit from Secure Boot is already gone on these devices anyway.
+Because of that I am releasing this, because it benefits right to repair and makes sure that even if Acer shuts down their version of this, people can still unlock their UEFIs.</p>
+<p>With that said, you can find the python script on my github: <a href="https://github.com/Computerdores/acer-uefi-upw-gen">Computerdores/acer-uefi-upw-gen</a>.
+Also, if you have an Acer Laptop feel free to test it and let me know if it works, as I only know that it works on my Acer A315-23.</p>
+
+
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="https://jann.stute.dev/privacy/">privacy</a>]</span>
+            <span>[<a href="https://darktheme.club/">Proud member of darktheme.club</a>]</span>
+            <span>[<a href="https://no-js.club/">Member of the no-JS club</a>]</span>
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+            <span>[<a href="https://github.com/Computerdores/computerdores.github.io">Source Code available on GitHub</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>

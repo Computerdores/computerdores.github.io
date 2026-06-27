@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+    <title>Computerdores</title>
+    <link rel="self" type="application/atom+xml" href="https://jann.stute.dev/atom.xml"/>
+    <link rel="alternate" type="text/html" href="https://jann.stute.dev"/>
+    <generator uri="https://www.getzola.org/">Zola</generator>
+    <updated>2026-06-28T00:00:00+00:00</updated>
+    <id>https://jann.stute.dev/atom.xml</id>
+    <entry xml:lang="en">
+        <title>UEFI Crackme</title>
+        <published>2026-06-28T00:00:00+00:00</published>
+        <updated>2026-06-28T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/blog/uefi-crackme/"/>
+        <id>https://jann.stute.dev/blog/uefi-crackme/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/blog/uefi-crackme/">&lt;p&gt;Recently, my laptop (an Acer A315-23) decided to randomly enable secure boot and since my linux install is obviously not signed, it proceeded to not boot anymore.
+Given that I had work to do, I immediately went to disable it, only to realise I had at some point set a password for my UEFI.
+The only problem: I didn&#x27;t remember it, only that I had set something simple.
+And so it happened that I tried 3 incorrect UEFI passwords and was greeted with this:&lt;&#x2F;p&gt;
+&lt;pre class=&quot;z-code&quot;&gt;&lt;code&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;┌────────────────────────────────────────┐
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;│ Enter Unlock Password(Key: xxXXxxXXxx) │
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;├────────────────────────────────────────┤
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;│█                                       │
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-text z-plain&quot;&gt;└────────────────────────────────────────┘
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Which immediately prompted the question: &quot;What the hell is an Unlock Password and why is it telling me about a key?&quot;
+After a bit of googling, it seemed to me that this is intended to be a way for Acer to sell UEFI unlocks to people, with the key being used as a nonce.&lt;&#x2F;p&gt;
+&lt;p&gt;And while, later the same day, I managed to guess my UEFI password (it was &quot;1&quot;), I was immediately hooked on reversing this.
+Afterall, this is basically an in-the-wild crackme and with CTF &lt;a href=&quot;https:&#x2F;&#x2F;kabir.au&#x2F;blog&#x2F;the-ctf-scene-is-dead&quot;&gt;kinda, sorta, maybe being dead&lt;&#x2F;a&gt;, I am a rev-starved rev-addict.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;extracting-uefi-image&quot;&gt;Extracting UEFI image&lt;&#x2F;h2&gt;
+&lt;p&gt;The first step was of course getting my hands on a UEFI image I can reverse.
+Luckily, Acer provides a seemingly complete list of released versions of the UEFI firmware with download links on their website.&lt;&#x2F;p&gt;
+&lt;p&gt;After downloading the image for the version currently installed on my Laptop (1.19), it took me quite a bit to actually get something to reverse.
+Because as all manufacturers seem to do, Acer ships a single executable UEFI updater that you are supposed to run.
+Using binwalk&#x27;s &lt;code&gt;--extract&lt;&#x2F;code&gt; functionality quickly yielded me a bunch of files, whose names seemed reminiscent of extracted Insyde UEFI&#x27;s I had found &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;eabase&#x2F;UEFI-Repair-Guide-Wiki&#x2F;blob&#x2F;master&#x2F;Insyde-Flash-Firmware-Tool-(H2OFFT).md&quot;&gt;online&lt;&#x2F;a&gt;.
+After some googling, I was able to identify two of the included files as UEFI image files: &lt;code&gt;Z8E_multi.fd&lt;&#x2F;code&gt; and &lt;code&gt;Z8E2_multi.fd&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;At this point I found the &lt;code&gt;uefitool&lt;&#x2F;code&gt; package with the &lt;code&gt;uefiextract&lt;&#x2F;code&gt; tool.
+I used this to extract a bunch of PE32 EFI modules from the image (I used &lt;code&gt;Z8E2_multi.fd&lt;&#x2F;code&gt;, the stuff relevant to this post seemed to be the same in both files).
+Looking through those modules, it wasn&#x27;t long until I found my target: &lt;code&gt;A01UnlockPassword&lt;&#x2F;code&gt;.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;reversing-the-uefi-module&quot;&gt;Reversing the UEFI Module&lt;&#x2F;h2&gt;
+&lt;p&gt;Looking into the UEFI module my first step was to look for the strings I had already seen while interacting with the unlock mechanism.
+I was quickly able to identify this formatting call:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;C&quot; class=&quot;language-C z-code&quot;&gt;&lt;code class=&quot;language-C&quot; data-lang=&quot;C&quot;&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;sub_4014d0&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;msg&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-numeric z-integer z-hexadecimal z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-numeric z-base z-c&quot;&gt;0x&lt;&#x2F;span&gt;200&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-string z-quoted z-double z-c&quot;&gt;&lt;span class=&quot;z-storage z-type z-string z-c&quot;&gt;u&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-definition z-string z-begin z-c&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;span class=&quot;z-constant z-other z-placeholder z-c&quot;&gt;%s&lt;&#x2F;span&gt;(Key:&lt;span class=&quot;z-constant z-other z-placeholder z-c&quot;&gt;%s&lt;&#x2F;span&gt;)&lt;span class=&quot;z-punctuation z-definition z-string z-end z-c&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; buffer&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;Which lead me to this string comparison of a string computed in the same method:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;C&quot; class=&quot;language-C z-code&quot;&gt;&lt;code class=&quot;language-C&quot; data-lang=&quot;C&quot;&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;generate_upw_bin&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;buf&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-numeric z-integer z-hexadecimal z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-numeric z-base z-c&quot;&gt;0x&lt;&#x2F;span&gt;a&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;out&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;bytes_to_wstr&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;out&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; unlock_password&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-comment z-line z-double-slash z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-c&quot;&gt;&#x2F;&#x2F;&lt;&#x2F;span&gt; ...
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-keyword z-control z-c&quot;&gt;else&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-control z-c&quot;&gt;if&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;wstrcmp&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;unlock_password&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; input&lt;span class=&quot;z-keyword z-operator z-ternary z-c&quot;&gt;?&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;    rsi &lt;span class=&quot;z-keyword z-operator z-assignment z-c&quot;&gt;=&lt;&#x2F;span&gt; EFI_SECURITY_VIOLATION&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;And while I had obviously not named these methods as you see them here yet, it did immediately seem like this comparison would be the actual check.
+From here I discovered that the only input for the generation (the &quot;Key&quot; we are shown) seemed to be a value loaded from a UEFI Variable in the parent function:&lt;&#x2F;p&gt;
+&lt;pre data-lang=&quot;C&quot; class=&quot;language-C z-code&quot;&gt;&lt;code class=&quot;language-C&quot; data-lang=&quot;C&quot;&gt;&lt;span class=&quot;z-source z-c&quot;&gt;VariableName &lt;span class=&quot;z-keyword z-operator z-assignment z-c&quot;&gt;=&lt;&#x2F;span&gt; &lt;span class=&quot;z-string z-quoted z-double z-c&quot;&gt;&lt;span class=&quot;z-storage z-type z-string z-c&quot;&gt;u&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-definition z-string z-begin z-c&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;AUPS&lt;span class=&quot;z-punctuation z-definition z-string z-end z-c&quot;&gt;&amp;quot;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt; &lt;span class=&quot;z-comment z-line z-double-slash z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-comment z-c&quot;&gt;&#x2F;&#x2F;&lt;&#x2F;span&gt; with fallback to u&amp;quot;AUPH&amp;quot; and u&amp;quot;AUPU&amp;quot; if variable is not set
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;status &lt;span class=&quot;z-keyword z-operator z-assignment z-c&quot;&gt;=&lt;&#x2F;span&gt; &lt;span class=&quot;z-variable z-other z-readwrite z-global z-mac-classic z-c&quot;&gt;gRT&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-accessor z-c&quot;&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;GetVariable&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;VariableName&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;UnknownVendorGuid&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-numeric z-integer z-decimal z-c&quot;&gt;0&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;DataSize&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;variable_data&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;result_1 &lt;span class=&quot;z-keyword z-operator z-assignment z-c&quot;&gt;=&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;ask_unlock_pw&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;span class=&quot;z-storage z-type z-c&quot;&gt;char&lt;&#x2F;span&gt;&lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;*&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;arg1 &lt;span class=&quot;z-keyword z-operator z-arithmetic z-c&quot;&gt;-&lt;&#x2F;span&gt; &lt;span class=&quot;z-constant z-numeric z-integer z-hexadecimal z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-definition z-numeric z-base z-c&quot;&gt;0x&lt;&#x2F;span&gt;30&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; variable_data&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; arg2&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; r9_2&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;
+&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-keyword z-control z-c&quot;&gt;if&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;result_1 &lt;span class=&quot;z-keyword z-operator z-comparison z-c&quot;&gt;&amp;gt;=&lt;&#x2F;span&gt; EFI_SUCCESS&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt; &lt;span class=&quot;z-meta z-block z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-block z-begin z-c&quot;&gt;{&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;    &lt;span class=&quot;z-variable z-other z-readwrite z-global z-mac-classic z-c&quot;&gt;gRT&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-accessor z-c&quot;&gt;-&amp;gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-variable z-function z-c&quot;&gt;SetVariable&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-begin z-c&quot;&gt;(&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;VariableName&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; &lt;span class=&quot;z-keyword z-operator z-c&quot;&gt;&amp;amp;&lt;&#x2F;span&gt;UnknownVendorGuid&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; 
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;        EFI_VARIABLE_NON_VOLATILE &lt;span class=&quot;z-keyword z-operator z-arithmetic z-c&quot;&gt;|&lt;&#x2F;span&gt; EFI_VARIABLE_BOOTSERVICE_ACCESS
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;            &lt;span class=&quot;z-keyword z-operator z-arithmetic z-c&quot;&gt;|&lt;&#x2F;span&gt; EFI_VARIABLE_RUNTIME_ACCESS&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; 
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;        &lt;span class=&quot;z-constant z-numeric z-integer z-decimal z-c&quot;&gt;0&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-separator z-c&quot;&gt;,&lt;&#x2F;span&gt; nullptr&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-meta z-function-call z-c&quot;&gt;&lt;span class=&quot;z-meta z-group z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-group z-end z-c&quot;&gt;)&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;    result &lt;span class=&quot;z-keyword z-operator z-assignment z-c&quot;&gt;=&lt;&#x2F;span&gt; EFI_SUCCESS&lt;span class=&quot;z-punctuation z-terminator z-c&quot;&gt;;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;&lt;span class=&quot;z-source z-c&quot;&gt;&lt;span class=&quot;z-meta z-block z-c&quot;&gt;&lt;span class=&quot;z-punctuation z-section z-block z-end z-c&quot;&gt;}&lt;&#x2F;span&gt;&lt;&#x2F;span&gt;
+&lt;&#x2F;span&gt;&lt;&#x2F;code&gt;&lt;&#x2F;pre&gt;
+&lt;p&gt;As you can see all candidates for the varible name contain &quot;AUP&quot; which probably stands for &quot;Acer Unlock Password&quot;.
+These variables are all associated with the UEFI Vendor GUID &lt;code&gt;89CB0E8D-393C-4830-BFFF65D9147E8C3B&lt;&#x2F;code&gt;, which I was not able to conclusively attribute.
+I suspect that it belongs either to Acer or to Insyde, since the latter is&#x2F;was also involved in the development of this UEFI FW.&lt;&#x2F;p&gt;
+&lt;p&gt;We can also see that the variable is cleared, if the unlock password (UPW) is entered correctly, making sure that each UPW can only be used once.
+I also found the function responsible for generating new keys for the UPW generation, however, it makes use of several non-standard UEFI protocols and the current time, so I didn&#x27;t look into it further.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;firmware-rehosting&quot;&gt;Firmware Rehosting&lt;&#x2F;h2&gt;
+&lt;p&gt;Before getting into the weeds on reversing the generation process, I first wanted to make sure I could validate partial findings and debug a future reimplementation of the process.
+For this I turned to firmware rehosting using unicorn.&lt;&#x2F;p&gt;
+&lt;p&gt;I wrote up a ~100 line python script that would load the PE32 into memory and prepare the emulator for running the &lt;code&gt;generate_upw_bin&lt;&#x2F;code&gt; function on its own.
+For this I simply had it load the necessary parameters for the function into memory and wrote some hooks to tell me intermediate results and stop execution after the function was finished.&lt;&#x2F;p&gt;
+&lt;p&gt;This meant that on the second evening of this project, I was already able to generate Unlock Passwords via this rehosting setup.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;reversing-the-upw-generation&quot;&gt;Reversing the UPW generation&lt;&#x2F;h2&gt;
+&lt;p&gt;With this context information I decided to dive into the function I called &lt;code&gt;generate_upw_bin&lt;&#x2F;code&gt;.
+It is responsible for generating an 8 byte value whose hex representation will be the UPW.
+The only input it takes is the ascii decimal representation of the key.&lt;&#x2F;p&gt;
+&lt;p&gt;Looking into the function, I could see that it is made up of three steps that each yield an intermediate buffer.
+Because I suspected that they didn&#x27;t come up with this entirely on their own, I used an LLM to help identify these steps and was met with great success.
+After validating the claims of LLM via my rehosting setup, I had already minimal python code for two thirds of the process.
+It turned out that the first step was simply calculating the SHA 256 digest, while the third step was just calculating the reversed ECMA182 variant of CRC64.&lt;&#x2F;p&gt;
+&lt;p&gt;This left just the second step to reverse engineer, which proved a little more interesting.
+It turns out that they implemented two custom shuffling routines, which produce a plaintext and a key from the SHA 256 digest.
+These are then fed into 10-round AES128 and the resulting cipher text is fed into the aforementioned CRC64 to produce the final output.&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;password-generator&quot;&gt;Password Generator&lt;&#x2F;h2&gt;
+&lt;p&gt;With the insights gained from reverse engineering this, it was relatively simple to write a python reimplementation of the password generation.
+I was debating whether to release this, however, during my research I found a third party website where you can buy these Unlock Passswords.
+And the existance of this third party site means that any modicum of a security benefit from Secure Boot is already gone on these devices anyway.
+Because of that I am releasing this, because it benefits right to repair and makes sure that even if Acer shuts down their version of this, people can still unlock their UEFIs.&lt;&#x2F;p&gt;
+&lt;p&gt;With that said, you can find the python script on my github: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;Computerdores&#x2F;acer-uefi-upw-gen&quot;&gt;Computerdores&#x2F;acer-uefi-upw-gen&lt;&#x2F;a&gt;.
+Also, if you have an Acer Laptop feel free to test it and let me know if it works, as I only know that it works on my Acer A315-23.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Analysing the Panchan Botnet</title>
+        <published>2026-05-23T00:00:00+00:00</published>
+        <updated>2026-05-23T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/panchan/"/>
+        <id>https://jann.stute.dev/writeups/panchan/</id>
+        
+        <summary type="text">A writeup analysing a malware sample of the panchan botnet.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>PP25 - &#x27;FTP++&#x27;</title>
+        <published>2025-11-15T00:00:00+00:00</published>
+        <updated>2025-11-15T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/pp25/pp25-ftppp/"/>
+        <id>https://jann.stute.dev/writeups/pp25/pp25-ftppp/</id>
+        
+        <summary type="text">A writeup for the &#x27;FTP++&#x27; challenge from the Platypwn 2025.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Site Revamp</title>
+        <published>2025-09-14T00:00:00+00:00</published>
+        <updated>2025-09-14T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/blog/site-revamp/"/>
+        <id>https://jann.stute.dev/blog/site-revamp/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/blog/site-revamp/">&lt;p&gt;So, one afternoon, a couple of months ago, I got bored and ended up browsing the dark web.
+Against my expectations I quickly found myself back on the clear web on an obscure blog whose .onion address had been linked to on a link list.
+Reading around the blog proved fascinating, not necessarily for the content of it (eventhough there was some interesting stuff there, see &lt;a href=&quot;https:&#x2F;&#x2F;artemislena.eu&#x2F;&quot;&gt;artemislena.eu&lt;&#x2F;a&gt;), but more so for something it linked to: &lt;u&gt;A webring&lt;&#x2F;u&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;For those that don&#x27;t know (I didn&#x27;t): A &lt;a href=&quot;https:&#x2F;&#x2F;wikipedia.org&#x2F;wiki&#x2F;webring&quot;&gt;webring&lt;&#x2F;a&gt; basically consists of a bunch of websites that link to each other in a circle, usually with some kind of common theme and a common navigation bar.
+What fascinated me about this was that this was a relic of the old internet which I had believed to have died when social media came around.
+Yet here it was, alive and well, just hidden from view waiting for one to find a website from which to start &lt;em&gt;surfing&lt;&#x2F;em&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;After proceeding to spend the entire evening reading around various blogs, I kind of forgot about it for a while due to a lack of spare time.
+Then, a couple of days before starting to write this, I remembered that afternoon and fell down the rabbit hole &lt;em&gt;again&lt;&#x2F;em&gt;.
+Several hours later, having already been unhappy with the uninspired, bland state my website was in at this point, I decided I would completely revamp it.&lt;&#x2F;p&gt;
+&lt;p&gt;For this I had a couple of things in mind that I noticed while surfing which I wanted to adopt for my website.
+First of I wanted to keep any and all javascript off of my site.
+This is because I don&#x27;t have any ambitions for this place beyond publishing my writeups and writing the occasional blog post and such things should not require javascript.
+Additionally this should hopefully make the website work properly in terminal based browsers.&lt;&#x2F;p&gt;
+&lt;p&gt;Another thing I came across is Jeff Huang&#x27;s post &lt;a href=&quot;https:&#x2F;&#x2F;jeffhuang.com&#x2F;designed_to_last&#x2F;&quot;&gt;&quot;This Page is Designed to Last&quot;&lt;&#x2F;a&gt;.
+It advocates for building web sites in ways that prevent them from requiring active maintenance to keep up since this maintenance typically dries up before the hosting does.
+As someone who also really likes the &lt;a href=&quot;https:&#x2F;&#x2F;www.stopkillinggames.com&#x2F;&quot;&gt;Stop Killing Games&lt;&#x2F;a&gt; Movement, this immediately resonated with me since it also makes archival easier.
+As a part of this I also switched from Jekyll, a Static Site Generator (SSG), which I was using previously to Zola, another SSG, because it is much simpler and faster and should thus simplify maintenance.
+I also switched to using a system font stack in order to speed up page loads and avoid hotlinking to external font providers like Google (also &lt;a href=&quot;https:&#x2F;&#x2F;www.youtube.com&#x2F;watch?v=W_rGq5K_i3Q&quot;&gt;cuz fuck em that&#x27;s why&lt;&#x2F;a&gt;).
+In the same vein I try to avoid increasing the (compressed) size of the entire site too much to make load times faster and archival easier (also I want the 250KB club badge).&lt;&#x2F;p&gt;
+&lt;p&gt;Lastly, since I like getting flash banged at 01:00 o&#x27;clock as little as the next guy&#x2F;girl I want my page to have a proper dark mode and light mode without people needing to use dark reader.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>About</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/about/"/>
+        <id>https://jann.stute.dev/about/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/about/">&lt;p&gt;Hi! I&#x27;m Jann, a 21 year old computer science student from Germany.&lt;&#x2F;p&gt;
+&lt;p&gt;I am active in the cybersecurity club of my university (the &lt;a href=&quot;https:&#x2F;&#x2F;platypwnies.de&#x2F;&quot;&gt;Platypwnies&lt;&#x2F;a&gt;)&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and spend some of my free time contributing to open-source projects, mainly &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;TagStudioDev&#x2F;TagStudio&quot;&gt;TagStudio&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;p&gt;I also maintain a small NAS at home to host some services for myself. Said NAS also collects comment &#x2F; guestbook submissions on this site for me to review later, so if that is broken you know why.&lt;&#x2F;p&gt;
+&lt;p&gt;If you want to reach out feel free to leave a message in the &lt;a href=&quot;https:&#x2F;&#x2F;jann.stute.dev&#x2F;guestbook&#x2F;&quot;&gt;guestbook&lt;&#x2F;a&gt; or checkout my &lt;a href=&quot;https:&#x2F;&#x2F;jann.stute.dev&#x2F;contact&#x2F;&quot;&gt;contacts&lt;&#x2F;a&gt;.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;As of writing this on 2026-05-27, I am also a representative and administrator of the club&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Contact</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-05T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/contact/"/>
+        <id>https://jann.stute.dev/contact/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/contact/">&lt;p&gt;E-Mail: jann.stute [ät] protonmail.com&lt;&#x2F;p&gt;
+&lt;p&gt;Github: &lt;a href=&quot;https:&#x2F;&#x2F;github.com&#x2F;Computerdores&quot;&gt;Computerdores&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Gitlab: &lt;a href=&quot;https:&#x2F;&#x2F;gitlab.com&#x2F;JannStute&quot;&gt;JannStute&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+&lt;p&gt;Mastodon: &lt;a href=&quot;https:&#x2F;&#x2F;chaos.social&#x2F;@computerdores&quot;&gt;@computerdores@chaos.social&lt;&#x2F;a&gt;&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Guestbook</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/guestbook/"/>
+        <id>https://jann.stute.dev/guestbook/</id>
+        
+        <summary type="text">Leave a Message!</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>Privacy Policy</title>
+        <published>2025-09-05T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/privacy/"/>
+        <id>https://jann.stute.dev/privacy/</id>
+        
+        <content type="html" xml:base="https://jann.stute.dev/privacy/">&lt;h2 id=&quot;general&quot;&gt;General&lt;&#x2F;h2&gt;
+&lt;p&gt;I currently use GitHub Pages to host the static content of this site so anything transmitted by your browser is subject to whatever they do with it. This may change in the future (e.g. I may decide to self-host it instead).&lt;&#x2F;p&gt;
+&lt;h2 id=&quot;forms&quot;&gt;Forms&lt;&#x2F;h2&gt;
+&lt;p&gt;When you submit a form on this website, the following is collected:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Any data entered into the form&lt;&#x2F;li&gt;
+&lt;li&gt;Your IP address&lt;&#x2F;li&gt;
+&lt;li&gt;Your User Agent String&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;What happens to that data:&lt;&#x2F;p&gt;
+&lt;ul&gt;
+&lt;li&gt;Data entered in forms &lt;em&gt;may&lt;&#x2F;em&gt; be published on the site
+&lt;ul&gt;
+&lt;li&gt;Typically in the form of guestbook entries, referrer statistic, comments, etc.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;li&gt;IP and UA String will not be published&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#1&quot;&gt;1&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt; and will be retained until I clean up my logs.
+&lt;ul&gt;
+&lt;li&gt;This is mostly in case of spamming&#x2F;DoS&#x2F;etc. so I can investigate.&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;&#x2F;li&gt;
+&lt;&#x2F;ul&gt;
+&lt;p&gt;Please Note: In order to delete a message in the future you will have to be able to prove that it was you who posted it.
+Typical ways of doing this would be providing a link to your website (one which you have control over) with the original message or signing your message with a public key&lt;sup class=&quot;footnote-reference&quot;&gt;&lt;a href=&quot;#2&quot;&gt;2&lt;&#x2F;a&gt;&lt;&#x2F;sup&gt;.
+I have this policy, because allowing anyone to request deletion of a guestbook entry&#x2F;comment would allow trolls and other bad faith actors to enact censorship on them.&lt;&#x2F;p&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;1&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;1&lt;&#x2F;sup&gt;
+&lt;p&gt;Nor will any third-party be allowed to access it in any way. Only exception could be if someone helps me with system maintenance, my NAS is stolen ^^, or something similar.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;div class=&quot;footnote-definition&quot; id=&quot;2&quot;&gt;&lt;sup class=&quot;footnote-definition-label&quot;&gt;2&lt;&#x2F;sup&gt;
+&lt;p&gt;Note that any information provided for this purpose will be stored in the public git repository of this website, so a shared secret like a password will not work.&lt;&#x2F;p&gt;
+&lt;&#x2F;div&gt;
+&lt;h2 id=&quot;changes&quot;&gt;Changes&lt;&#x2F;h2&gt;
+&lt;p&gt;Any changes to this privacy policy will be published here.
+In order to be notified of changes to this page you can subscribe to the &lt;a href=&quot;&#x2F;rss.xml&quot;&gt;RSS&lt;&#x2F;a&gt;&#x2F;&lt;a href=&quot;&#x2F;atom.xml&quot;&gt;Atom&lt;&#x2F;a&gt; Feeds.&lt;&#x2F;p&gt;
+</content>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>GPN - &#x27;Honeypot&#x27;</title>
+        <published>2025-07-09T20:00:00+02:00</published>
+        <updated>2025-07-09T20:00:00+02:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/gpn2025-honeypot/"/>
+        <id>https://jann.stute.dev/writeups/gpn2025-honeypot/</id>
+        
+        <summary type="text">A writeup for the &#x27;honeypot&#x27; challenge from the GPN 2025.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>CSCG - &#x27;echofaas&#x27;</title>
+        <published>2025-05-01T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/cscg-echofaas/"/>
+        <id>https://jann.stute.dev/writeups/cscg-echofaas/</id>
+        
+        <summary type="text">A writeup for the &#x27;echofaas&#x27; challenge from the CSCG 2025.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>0xL4ugh - &#x27;dance&#x27;</title>
+        <published>2024-06-24T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/crackme/stoopids-dance/"/>
+        <id>https://jann.stute.dev/writeups/crackme/stoopids-dance/</id>
+        
+        <summary type="text">A writeup for a reversing challenge from the 0xL4ugh CTF involving runtime bytecode modification.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>GPN - &#x27;Archventure Time&#x27;</title>
+        <published>2024-06-05T12:00:00+02:00</published>
+        <updated>2024-06-05T12:00:00+02:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/gpn2024-archventure-time/"/>
+        <id>https://jann.stute.dev/writeups/gpn2024-archventure-time/</id>
+        
+        <summary type="text">A writeup for the &#x27;Archventure Time&#x27; challenge from the GPN 2024.</summary>
+        
+    </entry>
+    <entry xml:lang="en">
+        <title>0xL4ugh - &#x27;nano&#x27;</title>
+        <published>2024-05-21T00:00:00+00:00</published>
+        <updated>2025-09-06T00:00:00+00:00</updated>
+        
+        <author>
+          <name>
+            
+              Jann Stute
+            
+          </name>
+        </author>
+        
+        <link rel="alternate" type="text/html" href="https://jann.stute.dev/writeups/crackme/stoopids-nano/"/>
+        <id>https://jann.stute.dev/writeups/crackme/stoopids-nano/</id>
+        
+        <summary type="text">A writeup for a reversing challenge from the 0xL4ugh CTF involving assembly level obfuscation and cross process fault handling.</summary>
+        
+    </entry>
+</feed>

